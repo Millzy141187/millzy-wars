@@ -8,15 +8,19 @@ export interface RoomParams {
   world: 'arena' | 'sandbox'
   room: string
   fast: boolean
+  /** Seats per team. Four teams, so 1 = 4 players, 2 = 8 players, 4 = 16 players. */
+  teamSize: 1 | 2 | 4
   /** Kept off the public room list; friends join with the invite link. */
   private?: boolean
 }
 
 export function roomParams(params: URLSearchParams): RoomParams {
+  const size = params.get('size')
   return {
     world: params.get('world') === 'sandbox' ? 'sandbox' : 'arena',
     room: (params.get('room') ?? 'main').replace(/[^a-z0-9-]/gi, '').slice(0, 32) || 'main',
     fast: params.get('fast') === '1',
+    teamSize: size === '16' ? 4 : size === '8' ? 2 : 1,
     private: params.get('private') === '1',
   }
 }
@@ -24,7 +28,10 @@ export function roomParams(params: URLSearchParams): RoomParams {
 /** A bed-wars room with bots installed; `offline` rooms start as soon as their one player arrives. */
 export function createBedwarsRoom(p: RoomParams, offline = false): Room {
   const timeline = p.fast ? scaleTimeline(TIMELINE, 10) : TIMELINE
-  const rules = p.world === 'sandbox' ? sandboxRules() : arenaRules({ timeline, ...(offline ? { minPlayers: 1, countdownTicks: 5 * 20 } : p.fast ? { countdownTicks: 60 } : {}) })
+  const rules =
+    p.world === 'sandbox'
+      ? sandboxRules()
+      : arenaRules({ timeline, teamSize: p.teamSize, ...(offline ? { minPlayers: 1, countdownTicks: 5 * 20 } : p.fast ? { countdownTicks: 60 } : {}) })
   const room = new Room({ rules, seed: Math.floor(Math.random() * 1e6) })
   room.params = p
   installBots(room)

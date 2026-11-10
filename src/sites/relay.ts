@@ -1,8 +1,9 @@
 import type { Connection } from '../engine/net/client'
+import { TEAMS } from '../games/bedwars/blocks'
 import { bedwarsCodec, type ClientMessage, type ServerMessage } from '../games/bedwars/protocol'
 import { createBedwarsRoom, type RoomParams } from '../games/bedwars/server'
 import type { Room } from '../games/bedwars/room'
-import { decode, encode, FRAME_BYTES, Inbox, MAX_PLAYERS, Outbox, RECONNECT_MS } from './wire'
+import { decode, encode, FRAME_BYTES, Inbox, Outbox, RECONNECT_MS } from './wire'
 
 export type Member = { connectionId: string; userId: string; data: unknown }
 type Identity = { session: string; generation: string; revision: number; name: string; host: boolean }
@@ -20,7 +21,7 @@ function identity(member: Member): Identity | null {
 }
 const key = (member: Member, data: Identity) => JSON.stringify([member.userId, data.session])
 
-/** One explicit host, four friends, ephemeral matches. All peer messages are untrusted.
+/** One explicit host and their friends, ephemeral matches. All peer messages are untrusted.
  * The trusted relay supplies sender IDs; clients cannot send actions as another player.
  * A host is still trusted with the simulation: this is not competitive anti-cheat.
  */
@@ -103,6 +104,7 @@ export class RelayGame implements Connection<ClientMessage, ServerMessage> {
             this.handler(m)
           }).id
         }
+        const capacity = this.options.world === 'sandbox' ? 16 : TEAMS.length * this.options.teamSize
         const present = new Set<string>()
         for (const { member, data } of members) {
           if (member.connectionId === this.self) continue
@@ -110,7 +112,7 @@ export class RelayGame implements Connection<ClientMessage, ServerMessage> {
           present.add(peerKey)
           let peer = this.peers.get(peerKey)
           if (!peer) {
-            if (this.peers.size >= MAX_PLAYERS - 1) continue
+            if (this.peers.size >= capacity - 1) continue
             peer = { member, identity: data, id: 0, incoming: new Inbox(), outgoing: new Outbox() }
             this.peers.set(peerKey, peer)
             const target = peer

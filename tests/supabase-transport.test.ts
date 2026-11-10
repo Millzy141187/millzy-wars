@@ -70,7 +70,7 @@ function harness() {
       (m) => pending.push(() => client.game.receive(m)),
       (s) => pending.push(() => client.game.status(s)),
     )
-    game = new RelayGame({ name, hosting, world: 'arena', room: 'test', fast: false }, realtime, () => now)
+    game = new RelayGame({ name, hosting, world: 'arena', room: 'test', fast: false, teamSize: 1 }, realtime, () => now)
     client.game = game
     game.onMessage((m) => client.messages.push(m))
     game.onClose((m) => client.errors.push(m))

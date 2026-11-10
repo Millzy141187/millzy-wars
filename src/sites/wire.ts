@@ -6,7 +6,6 @@ import { fromBase64, toBase64 } from '../engine/world'
 export const FRAME_BYTES = 12_000
 export const MAX_BUFFER = 512_000
 export const FLUSH_MS = 100
-export const MAX_PLAYERS = 4
 export const RECONNECT_MS = 15_000
 
 export function encode<C, S>(codec: MessageCodec<C, S>, side: 'client' | 'server', message: C | S): string {
