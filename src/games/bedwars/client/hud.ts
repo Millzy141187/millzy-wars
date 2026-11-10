@@ -415,7 +415,7 @@ export class Hud {
     const view = g.gameView
     const self = g.self!
     if (!view) return
-    const rows: string[] = [`<div class="brand">${BRAND}</div>`]
+    const rows: string[] = [`<div class="brand"><span class="brand-kicker">${BRAND}</span><span class="brand-title">BED WARS</span></div>`]
     if (view.mode === 'sandbox') rows.push('<div class="line muted">Sandbox: try every mechanic. /help for commands.</div>')
     else if (view.phase === 'waiting') rows.push('<div class="line muted">Waiting for players</div>')
     else if (view.phase === 'countdown') rows.push(`<div class="line">Starting in <b>${Math.ceil(g.clock() / TPS)}</b></div>`)

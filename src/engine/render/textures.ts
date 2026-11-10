@@ -322,13 +322,27 @@ export function drawTile(recipe: TileRecipe, seed: number): ImageData {
         case 'bedrock':
           put(x, y, base, h(Math.floor(x / 2), Math.floor(y / 2), 6) > 0.5 ? 0.6 + n * 0.3 : 1.2 + n * 0.4)
           break
-        case 'bed':
+        case 'bed': {
+          const wood = rgb('#b48a52')
+          const darkWood = rgb('#7a5a38')
+          const linen: RGB = [246, 242, 232]
+          const crease: RGB = [224, 218, 205]
           if (recipe.face === 'top') {
-            const border = x === 0 || x === 15 || y === 0 || y === 15
-            put(x, y, border ? [240, 240, 240] : base, border ? 0.95 : (y === 5 ? 0.85 : 0.95) + n * 0.08)
-          } else if (recipe.face === 'side') put(x, y, y > 12 ? rgb('#b48a52') : base, y === 7 ? 1.1 : 0.9 + n * 0.08)
-          else put(x, y, base, 0.9 + n * 0.1)
+            const frame = x === 0 || x === 15 || y === 0 || y === 15
+            if (frame) put(x, y, base, 0.72 + n * 0.06)
+            else if (y <= 4) {
+              const folded = y === 4 || y === 1 || x === 1 || x === 14
+              put(x, y, folded ? crease : linen, (folded ? 0.95 : 1.02) + n * 0.03)
+            } else if (y === 5) put(x, y, linen, 0.88 + n * 0.04)
+            else put(x, y, base, ((x + y * 5) % 11 === 0 ? 0.9 : 1) * (0.97 + n * 0.07))
+          } else if (recipe.face === 'side') {
+            if (y >= 13) put(x, y, x < 2 || x > 13 || y === 15 ? darkWood : wood, 0.94 + n * 0.1)
+            else if (y >= 12) put(x, y, wood, 0.84 + n * 0.1)
+            else if (y === 11) put(x, y, linen, 0.92 + n * 0.04)
+            else put(x, y, base, (y === 7 ? 1.08 : 0.94) + n * 0.08)
+          } else put(x, y, base, 0.9 + n * 0.1)
           break
+        }
         case 'banded':
           // A light band round the middle of the sides, darker caps: crates, barrels, TNT.
           if (recipe.face === 'side' && y >= 6 && y <= 9) put(x, y, [235, 230, 220], 0.9 + n * 0.1)

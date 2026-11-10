@@ -21,6 +21,14 @@ const params = new URLSearchParams(location.search)
 const app = document.getElementById('app')!
 document.title = BRAND
 
+// Right-click is a game control, not a browser menu. Text fields keep their
+// native menu so copy and paste still work.
+document.addEventListener('contextmenu', (event) => {
+  const target = event.target instanceof Element ? event.target : null
+  if (target?.closest('input, textarea, [contenteditable="true"]')) return
+  event.preventDefault()
+}, true)
+
 function webglAvailable(): boolean {
   try {
     return !!document.createElement('canvas').getContext('webgl2')
@@ -116,8 +124,11 @@ function menu() {
   app.innerHTML = `
     <div class="menu" style="background-image:url(${dirtTile()})">
       <div class="menu-wrap">
-      <h1 class="menu-title">${BRAND}</h1>
-      <p class="menu-tagline">Protect your bed. Break theirs.</p>
+      <div class="menu-brand">
+        <p class="menu-kicker">Bed Wars</p>
+        <h1 class="menu-title">${BRAND}</h1>
+        <p class="menu-tagline menu-splash">Protect your bed. Break theirs.</p>
+      </div>
       <div class="menu-card">
         <label class="field"><span>Name</span><input id="name" maxlength="16" placeholder="Your name" value="${esc(savedName())}"></label>
         <p class="online-line" id="online"></p>
