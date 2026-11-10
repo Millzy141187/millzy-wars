@@ -35,7 +35,7 @@ export function createBedwarsRoom(p: RoomParams, offline = false): Room {
           timeline,
           teams: TEAMS.slice(0, p.size === 4 ? 4 : 8),
           teamSize: p.size === 16 ? 2 : 1,
-          ...(offline ? { minPlayers: 1, countdownTicks: 5 * 20 } : p.fast ? { countdownTicks: 60 } : {}),
+          ...(offline ? { countdownTicks: 5 * 20 } : p.fast ? { countdownTicks: 60 } : {}),
         })
   const room = new Room({ rules, seed: Math.floor(Math.random() * 1e6) })
   room.params = p

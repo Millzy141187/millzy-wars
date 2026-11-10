@@ -59,7 +59,7 @@ The menu offers three ways in:
   and only watches when every seat has a person in it. An invite link
   (`?room=name`) opens the room list ready to join that room.
 - **Solo against bots**: the whole game runs in your window against three bots
-  and starts by itself after five seconds. No server needed.
+  after you click Start in the lobby. No server needed.
 - **Practice sandbox**: a test platform with a station for each mechanic
   (jumps, fall heights, a sneak ledge, a bridging gap, a pillar pit, one of each
   block, dummies, generators and a shop) and every item in your kit. `/bot`

@@ -7,13 +7,16 @@ import { TOP } from '../src/games/bedwars/maps/arena'
 import { arena, duel, sandbox, TestClient, ticks } from './room-helpers'
 
 describe('lobby and start', () => {
-  test('one player waits; a second starts the countdown and the round', () => {
+  test('players wait for the host to start the countdown and round', () => {
     const room = arena()
     const a = new TestClient(room, 'Ash')
     ticks(room, 40)
     expect(room.phase).toBe('waiting')
     expect(a.p.y).toBeGreaterThan(60) // in the lobby above the map
     new TestClient(room, 'Bea')
+    ticks(room, 2)
+    expect(room.phase).toBe('waiting')
+    a.send({ t: 'start' })
     ticks(room, 2)
     expect(room.phase).toBe('countdown')
     ticks(room, 20)

@@ -396,7 +396,7 @@ export class Room {
       case 'team':
         return this.onTeam(p, msg.team)
       case 'start':
-        if (p.id === this.hostId && this.phase === 'waiting') this.beginCountdown(true)
+        if (p.id === this.hostId && this.phase === 'waiting') this.beginCountdown()
         return
       case 'settings':
         if (p.id !== this.hostId || this.phase === 'playing') return
@@ -712,7 +712,7 @@ export class Room {
 
   private command(p: Player, [name, ...args]: string[]): void {
     if (name === 'help') return this.event(p, 'system', this.rules.cheats ? 'Commands: /give <item> [count], /tp <x> <y> <z>, /heal, /kit, /kill, /bot [n] [easy|normal|hard|expert], /nobots, /start' : 'Commands: /start (host)')
-    if (name === 'start') return void (p.id === this.hostId && this.phase === 'waiting' && this.beginCountdown(true))
+    if (name === 'start') return void (p.id === this.hostId && this.phase === 'waiting' && this.beginCountdown())
     if (!this.rules.cheats) return this.event(p, 'error', 'Commands are off in this room.')
     switch (name) {
       case 'give': {
@@ -913,9 +913,8 @@ export class Room {
 
   // Round flow ---------------------------------------------------------------
 
-  private beginCountdown(forced: boolean): void {
+  private beginCountdown(): void {
     if (this.phase !== 'waiting') return
-    if (!forced && this.humans().length < this.rules.minPlayers) return
     this.phase = 'countdown'
     this.phaseStart = this.tickCount
   }
@@ -1173,7 +1172,6 @@ export class Room {
     }
     switch (this.phase) {
       case 'waiting':
-        this.beginCountdown(false)
         return
       case 'countdown':
         if (this.humans().length === 0) {

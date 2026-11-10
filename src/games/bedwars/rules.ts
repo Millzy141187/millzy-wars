@@ -18,8 +18,6 @@ export interface GameRules {
   mode: 'arena' | 'sandbox'
   teams: TeamId[]
   teamSize: number
-  /** Humans needed before the countdown starts on its own. */
-  minPlayers: number
   countdownTicks: number
   /** Fill empty seats with bots when the round starts. */
   bots: boolean
@@ -51,7 +49,6 @@ export function arenaRules(overrides: Partial<GameRules> = {}): GameRules {
     mode: 'arena',
     teams: TEAMS.slice(0, 4),
     teamSize: 1,
-    minPlayers: 2,
     countdownTicks: 10 * TPS,
     bots: true,
     botLevel: 'normal',
@@ -65,7 +62,7 @@ export function arenaRules(overrides: Partial<GameRules> = {}): GameRules {
 }
 
 export function sandboxRules(overrides: Partial<GameRules> = {}): GameRules {
-  return arenaRules({ mode: 'sandbox', bots: false, minPlayers: 1, respawnTicks: 2 * TPS, timeline: [], cheats: true, ...overrides })
+  return arenaRules({ mode: 'sandbox', bots: false, respawnTicks: 2 * TPS, timeline: [], cheats: true, ...overrides })
 }
 
 /** The same timeline, faster, for trying the round flow without waiting half an hour. */

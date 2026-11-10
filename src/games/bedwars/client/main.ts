@@ -206,7 +206,7 @@ function online(invite?: { room: string; private: boolean; fast: boolean }) {
     </div>
     <label class="field check"><input id="private" type="checkbox"> <span>Invite only: keep it off this list, and share the link instead</span></label>
     <label class="field check"><input id="fast" type="checkbox"> <span>Fast round: the timeline runs ten times quicker</span></label>
-    <p class="muted small">Typing the name of a room that exists joins it. Rounds start when two people are in; the host can start sooner with bots.</p>`
+    <p class="muted small">Typing the name of a room that exists joins it. The host starts each round when everyone is ready; bots fill open teams.</p>`
   let rooms: RoomInfo[] = []
   const join = (room: string, options: { private?: boolean; fast?: boolean; world?: 'arena' | 'sandbox'; size?: 4 | 8 | 16 } = {}) => {
     const name = playerName()

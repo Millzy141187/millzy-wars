@@ -89,9 +89,12 @@ describe('solo testing', () => {
     expect([...room.players.values()].some((p) => p.brain && !p.home)).toBe(false)
   })
 
-  test('solo against bots starts by itself with three bot teams', () => {
+  test('solo against bots waits for the host to start with three bot teams', () => {
     const room = createBedwarsRoom({ world: 'arena', room: 'solo', fast: false, size: 4 }, true)
     const a = new TestClient(room, 'Ash')
+    ticks(room, 5 * TPS + 2)
+    expect(room.phase).toBe('waiting')
+    a.send({ t: 'start' })
     ticks(room, 5 * TPS + 2)
     expect(room.phase).toBe('playing')
     expect(room.players.size).toBe(4)
