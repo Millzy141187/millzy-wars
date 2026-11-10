@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { ServerMessage } from '../src/games/bedwars/protocol'
-import { RelayGame } from '../src/sites/relay'
+import { RelayGame, type RelayMessage } from '../src/sites/relay'
 import { supabaseRealtime, type Channel } from '../src/supabase/realtime'
 
 // Models a public Supabase Realtime channel: presence keyed by tab, JSON
@@ -89,6 +89,28 @@ function harness() {
   return { add, step, stats: b.stats }
 }
 
+function controlledChannel() {
+  let status: ((state: string) => void) | null = null
+  const calls = { removed: 0, tracked: [] as Record<string, unknown>[] }
+  const channel: Channel = {
+    on() { return channel },
+    subscribe(callback) {
+      status = callback
+      callback('SUBSCRIBED')
+      return channel
+    },
+    async track(data) { calls.tracked.push(data); return 'ok' },
+    async send() { return 'ok' },
+    presenceState: <T>() => ({}) as Record<string, T[]>,
+    async unsubscribe() { calls.removed++; return 'ok' },
+  }
+  return {
+    channel,
+    calls,
+    drop(state: 'CLOSED' | 'CHANNEL_ERROR' | 'TIMED_OUT') { status?.(state) },
+  }
+}
+
 describe('Supabase game transport', () => {
   test('four players meet, receive worlds and share chat over public channels', () => {
     const h = harness()
@@ -107,6 +129,30 @@ describe('Supabase game transport', () => {
     expect(guests[2].messages.some((m) => m.t === 'event' && m.text.includes('hello over supabase'))).toBe(true)
     // The relay's 12 KiB frame budget is what Supabase's broadcast payload carries.
     expect(h.stats().maxBytes).toBeLessThan(16 * 1024)
+  })
+
+  test('a closed channel is replaced with a fresh subscription', async () => {
+    const made: ReturnType<typeof controlledChannel>[] = []
+    const events: RelayMessage[] = []
+    const states: string[] = []
+    const realtime = supabaseRealtime(
+      () => { const next = controlledChannel(); made.push(next); return next.channel },
+      (m) => events.push(m),
+      (s) => states.push(s),
+      { retryMs: 5 },
+    )
+    expect(made.length).toBe(1)
+    expect(events.filter((m) => m.type === 'ready').length).toBe(1)
+
+    made[0].drop('CLOSED')
+    await new Promise((done) => setTimeout(done, 30))
+
+    expect(states).toContain('disconnected')
+    expect(made.length).toBe(2)
+    expect(made[0].calls.removed).toBe(1)
+    expect(events.filter((m) => m.type === 'ready').length).toBe(2)
+    realtime.close()
+    expect(made[1].calls.removed).toBe(1)
   })
 
   test('a guest leaving frees its seat for another player', () => {

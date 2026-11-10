@@ -77,7 +77,7 @@ try {
   await mkdir('dist/review', { recursive: true })
   await guest.screenshot({ path: 'dist/review/sites-multiplayer.png' })
   await host.close()
-  await guest.getByText(/host or realtime connection is unavailable/).waitFor({ timeout: 25_000 })
+  await guest.getByText(/host or realtime connection is unavailable/).waitFor({ timeout: 55_000 })
   assert.deepEqual(errors, [])
   console.log('Sites smoke passed: built Worker/assets, CSRF, two browser players, map snapshot, match start, movement, ticket renewal, host departure. Screenshot: dist/review/sites-multiplayer.png')
 } finally { await browser?.close(); await mf.dispose() }

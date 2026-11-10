@@ -243,7 +243,7 @@ ordered fragments and caps each queue at 512 KB. Packet gaps and overload fail
 explicitly. There is no unbounded retry queue. Ticket renewal preserves the host
 room and guest seat/inventory, replacing each guest's stream with a full snapshot.
 After an actual page reload the player joins afresh. Host disconnects get a
-15-second grace period, then guests leave; they never elect a replacement.
+45-second grace period, then guests leave; they never elect a replacement.
 
 For the local built-artifact check, install Playwright Chromium once with
 `bunx playwright install chromium`, then `bun run build && bun run smoke:sites`.
@@ -269,7 +269,7 @@ two variables into `.env.local` for a local build.
   or send traffic: casual play, host-trusted, no anti-cheat or rankings.
 - Four beds for four players, eight beds for eight players, or eight beds with
   two players each for sixteen: the host picks the size. The host keeps the tab
-  open and visible, and a host that leaves ends the match after a 15-second
+  open and visible, and a host that leaves ends the match after a 45-second
   grace period.
 - The anon/publishable key is public by design; never put the service-role key in
   this build.
@@ -522,7 +522,7 @@ boundary. `FEATURES.md` tracks every feature against its test.
   separate frames; folding them into one would save more than shrinking them.
 - Sites multiplayer trusts the host browser. It is for casual matches, with no
   competitive integrity or persistent rankings. A closed/sleeping host ends play
-  after a 15-second grace period; a background tab may slow the simulation.
+  after a 45-second grace period; a background tab may slow the simulation.
 - Realtime budgets are shared by the whole site. Several busy rooms can exhaust
   the delivery budget; overload ends the stream explicitly instead of losing
   world edits silently. Use the Node server for larger or competitive games.

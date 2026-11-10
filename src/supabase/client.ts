@@ -32,6 +32,9 @@ export function connectSupabase(options: RelayGame['options']) {
       }) as unknown as Channel,
     (m: RelayMessage) => game.receive(m),
     (s: string) => game.status(s),
+    {
+      removeChannel: (channel) => client.removeChannel(channel as unknown as Parameters<typeof client.removeChannel>[0]),
+    },
   )
   game = new RelayGame(options, realtime)
   let last = performance.now()

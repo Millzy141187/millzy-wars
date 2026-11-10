@@ -57,7 +57,12 @@ function harness() {
     client.game.receive({ type: 'ready', ...client.member })
     presence(); drain()
   }
-  return { add, step, renew, clients, stats: () => ({ frames, maxBytes }) }
+  const drop = (client: ReturnType<typeof add>) => {
+    client.connected = false
+    client.game.status('disconnected')
+    presence(); drain()
+  }
+  return { add, step, renew, drop, clients, stats: () => ({ frames, maxBytes }) }
 }
 
 describe('Sites game transport', () => {
@@ -100,8 +105,23 @@ describe('Sites game transport', () => {
     const h = harness(), host = h.add(true)
     h.step(4)
     const guest = h.add(); h.step(60)
-    host.game.close(); h.step(320)
+    host.game.close(); h.step(940)
     expect(guest.errors.join()).toContain('host')
+  })
+  test('a connection gap under the grace period keeps the seat and resumes play', () => {
+    const h = harness(), host = h.add(true)
+    h.step(4)
+    const guest = h.add(); h.step(60)
+    h.drop(guest)
+    h.step(600) // 30 seconds: longer than the old 15-second grace, under the new one
+    expect(host.errors).toEqual([])
+    expect(guest.errors).toEqual([])
+    h.renew(guest, true); h.step(80)
+    expect(host.errors).toEqual([])
+    expect(guest.errors).toEqual([])
+    guest.game.send({ t: 'chat', text: '!after long gap' })
+    h.step(20)
+    expect(host.messages.some((m) => m.t === 'event' && m.text.includes('after long gap'))).toBe(true)
   })
   test('conflicting hosts refuse a split match', () => {
     const h = harness(), a = h.add(true)
