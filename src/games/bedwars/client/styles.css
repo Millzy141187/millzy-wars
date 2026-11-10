@@ -22,12 +22,12 @@
   --button: #7b7b7b;
   --button-hi: #b4b4b4;
   --button-lo: #4a4a4a;
-  /* Freebuff's sage ramp (the landing page's --brand), as stone-button bevels. */
-  --go: #5e774e;
-  --go-hi: #9db58b;
-  --go-lo: #34432b;
-  --sage: #b5cea5;
-  --sage-pale: #e2ead9;
+  /* Millzy Wars: a warm ember-and-sand ramp, as stone-button bevels. */
+  --go: #a8452a;
+  --go-hi: #e8916a;
+  --go-lo: #58200f;
+  --sage: #f0b48f;
+  --sage-pale: #ffe7d6;
   color-scheme: dark;
 }
 * { box-sizing: border-box; border-radius: 0; }
@@ -68,9 +68,9 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 6px; background: var(
 
 /* Menu screen: our own dirt texture, darkened, tiled ------------------------- */
 .menu { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px 16px; overflow-y: auto; background-color: #3b2a1e; background-size: 64px 64px; image-rendering: pixelated; }
-.menu::before { content: ''; position: fixed; inset: 0; background: linear-gradient(to bottom, rgba(3,6,10,0.92) 0%, rgba(16,31,35,0.78) 45%, rgba(23,42,41,0.62) 62%, rgba(0,0,0,0.85) 100%); }
+.menu::before { content: ''; position: fixed; inset: 0; background: linear-gradient(to bottom, rgba(12,6,4,0.92) 0%, rgba(43,22,15,0.78) 45%, rgba(61,30,18,0.62) 62%, rgba(0,0,0,0.85) 100%); }
 .menu-wrap { position: relative; display: grid; justify-items: center; gap: 22px; width: min(420px, 100%); }
-.menu-title { margin: 0; font-size: 64px; font-weight: 700; letter-spacing: 2px; color: var(--sage-pale); text-shadow: 4px 4px 0 #34432b, 0 0 24px rgba(157,181,139,0.35); }
+.menu-title { margin: 0; font-size: 64px; font-weight: 700; letter-spacing: 2px; color: var(--sage-pale); text-shadow: 4px 4px 0 #58200f, 0 0 24px rgba(232,145,106,0.35); }
 .menu-tagline { margin: -14px 0 0; color: var(--sage); text-shadow: var(--shadow); transform: rotate(-3deg); }
 .menu-card { width: 100%; padding: 18px; }
 .field { display: grid; gap: 6px; margin: 0 0 12px; font-size: 14px; color: var(--window-dim); }

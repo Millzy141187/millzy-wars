@@ -12,7 +12,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const smoke = process.env.ELECTRON_SMOKE === '1'
-const NAME = 'Buffcraft'
+const NAME = 'Millzy Wars'
 
 app.setName(NAME)
 // One window per machine: a second launch focuses the first.

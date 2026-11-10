@@ -1,4 +1,4 @@
-# Buffcraft: a voxel bed-wars game and engine
+# Millzy Wars: a voxel bed-wars game and engine
 
 A complete bed-wars game in the browser and on the desktop: four teams on
 floating islands, beds to defend, forges and diamond and emerald generators,
@@ -13,8 +13,8 @@ server, or as an Electron app.
 
 It is built as a small game-agnostic voxel engine (`src/engine/`) plus the
 bed-wars game on top (`src/games/bedwars/`), so the engine carries over to
-other block games. The product name is `BRAND` in
-`src/games/bedwars/constants.ts`.
+other block games. This build is personalised from the Buffcraft template as
+*Millzy Wars*; the product name is `BRAND` in `src/games/bedwars/constants.ts`.
 
 ## Run it
 

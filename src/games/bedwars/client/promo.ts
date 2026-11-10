@@ -41,5 +41,5 @@ export function remixButton(): string {
 
 /** A line for the end-of-round summary. */
 export function summaryLine(): string {
-  return promoShown() ? `<p class="promo-line">${FREEBUFF_MARK}Want your own version? ${link('summary-remix', '', 'Remix Buffcraft in Freebuff')}, free.</p>` : ''
+  return promoShown() ? `<p class="promo-line">${FREEBUFF_MARK}Want your own version? ${link('summary-remix', '', 'Remix Millzy Wars in Freebuff')}, free.</p>` : ''
 }
