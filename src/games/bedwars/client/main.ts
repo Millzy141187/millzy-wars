@@ -9,7 +9,7 @@ import { loadSettings } from './settings'
 import { openSettings } from './settings-ui'
 import { openWardrobe } from './wardrobe'
 import { bestRoom, cleanRoomName, fetchRooms, openSeats, randomRoomName, statusLabel, type RoomInfo, type RoomList } from './rooms'
-import { FREEBUFF_MARK, freebuffUrl, promoCard, promoShown } from './promo'
+import { FREEBUFF_MARK, freebuffUrl, promoShown } from './promo'
 import '@fontsource/pixelify-sans/400.css'
 import '@fontsource/pixelify-sans/700.css'
 import { drawTile } from '../../../engine/render/textures'
@@ -129,7 +129,6 @@ function menu() {
         </div>
         <p class="menu-foot">${__SITES__ ? 'Host a casual match for up to sixteen players, or join with a room code. The host runs the match and must keep this tab open and visible.' : 'Online plays with people on this server: pick a room or make one and share its link.'} Solo runs bots on your own machine. The sandbox has a station for every mechanic and /bot for sparring.</p>
       </div>
-      ${promoCard()}
       <p class="version">v${__APP_VERSION__}${promoShown() ? ` · <a href="${freebuffUrl('menu-footer')}" target="_blank" rel="noopener">${FREEBUFF_MARK}Made with Freebuff</a>` : ''}</p>
       </div>
     </div>`

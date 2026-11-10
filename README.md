@@ -322,10 +322,10 @@ starter instance, health check `/healthz`).
 
 ### The Freebuff promotion
 
-On a page served over https, the menu shows a "Built with Freebuff" card, the
-pause menu a Remix button, and the round summary a line, all linking to
-freebuff.com with `utm_source=buffcraft`. Local and desktop runs (http) never
-show them; add `?promo=1` to see them locally. They live in
+On a page served over https, the menu's version line shows a small "Made with
+Freebuff" link, the pause menu a Remix button, and the round summary a line,
+all linking to freebuff.com with `utm_source=buffcraft`. Local and desktop runs
+(http) never show them; add `?promo=1` to see them locally. They live in
 `src/games/bedwars/client/promo.ts`; delete it and its three call sites to
 remove them.
 
