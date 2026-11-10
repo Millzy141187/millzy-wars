@@ -49,7 +49,7 @@ export const TIMELINE: TimelineEvent[] = [
 export function arenaRules(overrides: Partial<GameRules> = {}): GameRules {
   return {
     mode: 'arena',
-    teams: [...TEAMS],
+    teams: TEAMS.slice(0, 4),
     teamSize: 1,
     minPlayers: 2,
     countdownTicks: 10 * TPS,

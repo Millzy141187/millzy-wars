@@ -18,8 +18,17 @@ export const SKYREACH: ArenaLayout = {
   id: 'skyreach',
   name: 'Skyreach',
   theme: 'forest',
-  bases: { red: { at: [0, -48], out: [0, -1] }, blue: { at: [48, 0], out: [1, 0] }, green: { at: [0, 48], out: [0, 1] }, yellow: { at: [-48, 0], out: [-1, 0] } },
-  diamonds: [[30, 30], [30, -30], [-30, 30], [-30, -30]],
+  bases: {
+    red: { at: [0, -48], out: [0, -1] },
+    blue: { at: [48, 0], out: [1, 0] },
+    green: { at: [0, 48], out: [0, 1] },
+    yellow: { at: [-48, 0], out: [-1, 0] },
+    orange: { at: [32, -48], out: [0, -1] },
+    purple: { at: [48, 32], out: [1, 0] },
+    cyan: { at: [-32, 48], out: [0, 1] },
+    pink: { at: [-48, -32], out: [-1, 0] },
+  },
+  diamonds: [[-22, -22], [22, -22], [22, 22], [-22, 22]],
   middle: 10,
   seed: 101,
   sky: '#8ec5ff',
@@ -30,8 +39,17 @@ export const LANTERNS: ArenaLayout = {
   id: 'lanterns',
   name: 'Lanterns',
   theme: 'village',
-  bases: { red: { at: [-38, -38], out: [0, -1] }, blue: { at: [38, -38], out: [1, 0] }, green: { at: [38, 38], out: [0, 1] }, yellow: { at: [-38, 38], out: [-1, 0] } },
-  diamonds: [[0, -40], [40, 0], [0, 40], [-40, 0]],
+  bases: {
+    red: { at: [-38, -38], out: [0, -1] },
+    blue: { at: [38, -38], out: [1, 0] },
+    green: { at: [38, 38], out: [0, 1] },
+    yellow: { at: [-38, 38], out: [-1, 0] },
+    orange: { at: [0, -50], out: [0, -1] },
+    purple: { at: [50, 0], out: [1, 0] },
+    cyan: { at: [0, 50], out: [0, 1] },
+    pink: { at: [-50, 0], out: [-1, 0] },
+  },
+  diamonds: [[-22, -22], [22, -22], [22, 22], [-22, 22]],
   middle: 12,
   seed: 202,
   sky: '#e9a77c',
@@ -42,8 +60,17 @@ export const DUNES: ArenaLayout = {
   id: 'dunes',
   name: 'Dunes',
   theme: 'desert',
-  bases: { red: { at: [0, -46], out: [0, -1] }, blue: { at: [46, 0], out: [1, 0] }, green: { at: [0, 46], out: [0, 1] }, yellow: { at: [-46, 0], out: [-1, 0] } },
-  diamonds: [[34, 34], [34, -34], [-34, 34], [-34, -34]],
+  bases: {
+    red: { at: [0, -46], out: [0, -1] },
+    blue: { at: [46, 0], out: [1, 0] },
+    green: { at: [0, 46], out: [0, 1] },
+    yellow: { at: [-46, 0], out: [-1, 0] },
+    orange: { at: [32, -46], out: [0, -1] },
+    purple: { at: [46, 32], out: [1, 0] },
+    cyan: { at: [-32, 46], out: [0, 1] },
+    pink: { at: [-46, -32], out: [-1, 0] },
+  },
+  diamonds: [[-22, -22], [22, -22], [22, 22], [-22, 22]],
   middle: 11,
   seed: 303,
   sky: '#f1d6a0',
@@ -54,8 +81,17 @@ export const FROSTPEAK: ArenaLayout = {
   id: 'frostpeak',
   name: 'Frostpeak',
   theme: 'frost',
-  bases: { red: { at: [-36, -36], out: [0, -1] }, blue: { at: [36, -36], out: [1, 0] }, green: { at: [36, 36], out: [0, 1] }, yellow: { at: [-36, 36], out: [-1, 0] } },
-  diamonds: [[0, -48], [48, 0], [0, 48], [-48, 0]],
+  bases: {
+    red: { at: [-36, -36], out: [0, -1] },
+    blue: { at: [36, -36], out: [1, 0] },
+    green: { at: [36, 36], out: [0, 1] },
+    yellow: { at: [-36, 36], out: [-1, 0] },
+    orange: { at: [0, -50], out: [0, -1] },
+    purple: { at: [50, 0], out: [1, 0] },
+    cyan: { at: [0, 50], out: [0, 1] },
+    pink: { at: [-50, 0], out: [-1, 0] },
+  },
+  diamonds: [[-22, -22], [22, -22], [22, 22], [-22, 22]],
   middle: 12,
   seed: 404,
   sky: '#d4e5f2',
@@ -66,8 +102,17 @@ export const RUINS: ArenaLayout = {
   id: 'ruins',
   name: 'Ruins',
   theme: 'ruins',
-  bases: { red: { at: [0, -50], out: [0, -1] }, blue: { at: [50, 0], out: [1, 0] }, green: { at: [0, 50], out: [0, 1] }, yellow: { at: [-50, 0], out: [-1, 0] } },
-  diamonds: [[34, 16], [-16, 34], [-34, -16], [16, -34]],
+  bases: {
+    red: { at: [0, -50], out: [0, -1] },
+    blue: { at: [50, 0], out: [1, 0] },
+    green: { at: [0, 50], out: [0, 1] },
+    yellow: { at: [-50, 0], out: [-1, 0] },
+    orange: { at: [32, -50], out: [0, -1] },
+    purple: { at: [50, 32], out: [1, 0] },
+    cyan: { at: [-32, 50], out: [0, 1] },
+    pink: { at: [-50, -32], out: [-1, 0] },
+  },
+  diamonds: [[-22, -22], [22, -22], [22, 22], [-22, 22]],
   middle: 12,
   seed: 505,
   sky: '#a9c0d0',
@@ -102,10 +147,10 @@ export function createArena(teams: readonly TeamId[] = TEAMS, layout: ArenaLayou
   const areas: Area[] = []
   const protect = (x: number, y: number, z: number, r: number, h = 3) => zones.push([x - r, y, z - r, x + r, y + h, z + r])
 
-  const lanes = walkways(layout)
+  const lanes = walkways(layout, teams)
   for (const [x0, z0, x1, z1] of lanes) b.reserve(x0, TOP, z0, x1, TOP + 2, z1)
-  const cross = onCross(layout)
-  const frames = TEAMS.map((team) => {
+  const cross = onCross(layout, teams)
+  const frames = teams.map((team) => {
     const plan = basePlan(layout, team)
     const f = new Frame(b, plan.cx, plan.cz, plan.out, TOP)
     reserveBase(f, !cross)
@@ -165,7 +210,7 @@ export function createArena(teams: readonly TeamId[] = TEAMS, layout: ArenaLayou
   for (const [i, [dx, dz]] of layout.diamonds.entries()) theme.diamond(b, MID + dx, MID + dz, TOP, diamondSafe[i], rnd)
   const emeralds = theme.middle(b, MID, TOP, R, middleSafe, rnd)
   for (const area of areas) theme.scatter(b, area, TOP, rnd)
-  islets(b, layout, (x, z) => inLine([x - 5, z - 5, x + 5, z + 5], 2) || nearLane(x, z, 8), rnd)
+  islets(b, layout, teams, (x, z) => inLine([x - 5, z - 5, x + 5, z + 5], 2) || nearLane(x, z, 8), rnd)
   b.carve()
 
   for (const { team, plan } of frames) {
@@ -230,10 +275,10 @@ export function createArena(teams: readonly TeamId[] = TEAMS, layout: ArenaLayou
  * Small floating islets dressed by the theme, out of line with every base
  * and lane: scenery to look at, which no bot will ever bridge into.
  */
-function islets(b: Builder, layout: ArenaLayout, inWay: (x: number, z: number) => boolean, rnd: () => number): void {
+function islets(b: Builder, layout: ArenaLayout, teams: readonly TeamId[], inWay: (x: number, z: number) => boolean, rnd: () => number): void {
   const theme = THEMES[layout.theme]
   const centres: [number, number, number][] = [
-    ...TEAMS.map((t) => [MID + layout.bases[t].at[0], MID + layout.bases[t].at[1], 15] as [number, number, number]),
+    ...teams.map((t) => [MID + layout.bases[t].at[0], MID + layout.bases[t].at[1], 15] as [number, number, number]),
     ...layout.diamonds.map(([dx, dz]) => [MID + dx, MID + dz, 8] as [number, number, number]),
     [MID, MID, layout.middle + 6],
   ]

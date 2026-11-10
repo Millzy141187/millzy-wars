@@ -17,23 +17,29 @@ describe('the room list', () => {
     expect(hidden.summary()).toBeNull()
   })
 
-  test('the host can open four, eight or sixteen player rooms', () => {
+  test('the host can open rooms with four or eight beds', () => {
     const four = createBedwarsRoom(roomParams(params('room=size4')))
     new TestClient(four, 'Ash')
     expect(four.summary()).toMatchObject({ capacity: 4 })
+    expect(four.rules.teams).toHaveLength(4)
     expect(four.rules.teamSize).toBe(1)
+    expect(four.map.bases).toHaveLength(4)
 
     const eight = createBedwarsRoom(roomParams(params('room=size8&size=8')))
     new TestClient(eight, 'Ash')
     expect(eight.summary()).toMatchObject({ capacity: 8 })
-    expect(eight.rules.teamSize).toBe(2)
+    expect(eight.rules.teams).toHaveLength(8)
+    expect(eight.rules.teamSize).toBe(1)
+    expect(eight.map.bases).toHaveLength(8)
     eight.startRound()
     expect(eight.players.size).toBe(8)
 
     const sixteen = createBedwarsRoom(roomParams(params('room=size16&size=16')))
     new TestClient(sixteen, 'Ash')
     expect(sixteen.summary()).toMatchObject({ capacity: 16 })
-    expect(sixteen.rules.teamSize).toBe(4)
+    expect(sixteen.rules.teams).toHaveLength(8)
+    expect(sixteen.rules.teamSize).toBe(2)
+    expect(sixteen.map.bases).toHaveLength(8)
   })
 
   test('sandbox training dummies are not counted as bots', () => {

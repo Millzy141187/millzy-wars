@@ -1,4 +1,4 @@
-import { TEAM_COLORS, TEAM_NAMES, TEAMS, type TeamId } from '../blocks'
+import { TEAM_COLORS, TEAM_NAMES, type TeamId } from '../blocks'
 import { BRAND, MAX_HEALTH, TPS } from '../constants'
 import { OFFERS, TOOL_TIER_COST, UPGRADES, type Offer, type OfferCategory } from '../shop'
 import { countItem, HOTBAR, INVENTORY_SIZE } from '../../../engine/inventory'
@@ -457,10 +457,12 @@ export class Hud {
     const key = JSON.stringify([view.teams, view.phase, Math.ceil(g.clock() / TPS), self.team, isHost, view.bots, g.botLevel, people.map((p) => [p.id, p.name, p.team]), g.votes, g.myVote, g.locked, this.copied])
     if (this.lobby.dataset.key === key) return
     this.lobby.dataset.key = key
-    const teamButtons = TEAMS.map((t) => {
-      const n = g.views.filter((p) => p.team === t).length
-      return `<button class="btn team${self.team === t ? ' chosen' : ''}" data-team="${t}" style="--team:${TEAM_COLORS[t]}"><i></i>${TEAM_NAMES[t]}<span>${n}</span></button>`
-    }).join('')
+    const teamButtons = view.teams
+      .map(({ team: t }) => {
+        const n = g.views.filter((p) => p.team === t).length
+        return `<button class="btn team${self.team === t ? ' chosen' : ''}" data-team="${t}" style="--team:${TEAM_COLORS[t]}"><i></i>${TEAM_NAMES[t]}<span>${n}</span></button>`
+      })
+      .join('')
     const humans = people.length
     if (g.locked) {
       // Playing on the lobby deck: a one-line banner; Esc opens the full lobby screen.

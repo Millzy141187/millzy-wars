@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { AIR, BED, BLOCKS, blockDef, FROST_LAMP, GLASS, isBed, LANTERN, PLANKS, STAINED_GLASS, TEAMS, type TeamId } from '../src/games/bedwars/blocks'
 import { ARENA_HEIGHT, ARENA_SIZE, ARENAS, createArena, TOP } from '../src/games/bedwars/maps/arena'
+import { baseFootprint, botRoute } from '../src/games/bedwars/maps/plan'
 import type { MapDef, TeamBase } from '../src/games/bedwars/maps/types'
 import { arenaRules } from '../src/games/bedwars/rules'
 import { atlasLayout } from '../src/engine/render/atlas-layout'
@@ -39,7 +40,7 @@ function axes(base: TeamBase) {
  */
 function botRoutes(map: MapDef): Set<string> {
   const cells = new Set<string>()
-  const mid = map.world.sx / 2
+  const feet = map.bases.map(baseFootprint)
   const leg = (ax: number, az: number, bx: number, bz: number) => {
     const [x0, x1] = [Math.floor(Math.min(ax, bx)), Math.floor(Math.max(ax, bx))]
     const [z0, z1] = [Math.floor(Math.min(az, bz)), Math.floor(Math.max(az, bz))]
@@ -47,16 +48,15 @@ function botRoutes(map: MapDef): Set<string> {
   }
   for (const own of map.bases) {
     const stand = [own.bed.x + 0.5 - own.bed.dx * 2.5, own.bed.z + 0.5 - own.bed.dz * 2.5]
-    const alongZ = Math.abs(own.center[0] - mid) < 1
+    const alongZ = Math.abs(own.center[0] - map.world.sx / 2) < 1
     for (const sx of [stand[0] - 0.49, stand[0] + 0.49])
       for (const sz of [stand[1] - 0.49, stand[1] + 0.49]) {
-        const [hx, hz] = [Math.floor(sx) + 0.5, Math.floor(sz) + 0.5]
+        const here: [number, number] = [Math.floor(sx) + 0.5, Math.floor(sz) + 0.5]
         for (const t of map.bases) {
           if (t === own) continue
-          for (const [gx, gz] of [[t.bed.x + 0.5 - t.bed.dx * 2, t.bed.z + 0.5 - t.bed.dz * 2], [t.spawn[0], t.spawn[2]]]) {
-            const [cx, cz] = alongZ ? [hx, gz] : [gx, hz]
-            leg(hx, hz, cx, cz)
-            leg(cx, cz, gx, gz)
+          for (const goal of [[t.bed.x + 0.5 - t.bed.dx * 2, t.bed.z + 0.5 - t.bed.dz * 2], [t.spawn[0], t.spawn[2]]] as [number, number][]) {
+            const route = botRoute(here, goal, own.team, t.team, feet, alongZ)
+            for (let i = 1; i < route.length; i++) leg(route[i - 1][0], route[i - 1][1], route[i][0], route[i][1])
           }
         }
       }
@@ -186,21 +186,14 @@ describe('arenas', () => {
         }
       })
 
-      test('nothing in a base walls in a bot heading for another base', () => {
-        // Bots cannot dig map blocks and leave in straight legs toward the other bases, so from any
-        // open cell of a base, the next cell that way must not stop them (a hop-over block is fine).
+      test('a bot can walk from its spawn to the stand behind its bed', () => {
+        // Bots return to this stand before every trip, so it must be reachable inside the base
+        // (hopping one-high blocks); the routes out from it are checked above.
         for (const base of map.bases) {
-          const others = map.bases.filter((b) => b !== base)
-          const dirs: [number, number][] = []
-          for (const o of others) {
-            const dx = Math.sign(o.center[0] - base.center[0])
-            const dz = Math.sign(o.center[2] - base.center[2])
-            for (const d of [[dx, 0], [0, dz]] as [number, number][]) if ((d[0] || d[1]) && !dirs.some((e) => e[0] === d[0] && e[1] === d[1])) dirs.push(d)
-          }
-          // Every cell you can walk to from the spawn (hopping one-high blocks), within the base.
           const [cx, cz] = [Math.floor(base.center[0]), Math.floor(base.center[2])]
           const open = (x: number, z: number) => Math.abs(x - cx) <= 12 && Math.abs(z - cz) <= 12 && solid(map, x, TOP - 1, z) && !wall(map, x, z)
           const [sx, , sz] = cell(base.spawn)
+          const [tx, , tz] = cell([base.bed.x + 0.5 - base.bed.dx * 2.5, TOP, base.bed.z + 0.5 - base.bed.dz * 2.5])
           const seen = new Set([`${sx},${sz}`])
           const queue: [number, number][] = [[sx, sz]]
           while (queue.length) {
@@ -214,10 +207,7 @@ describe('arenas', () => {
             }
           }
           expect(seen.size).toBeGreaterThan(150)
-          for (const key of seen) {
-            const [x, z] = key.split(',').map(Number)
-            for (const [dx, dz] of dirs) if (wall(map, x + dx, z + dz)) expect(`wall at ${x + dx},${z + dz} from ${x},${z}`).toBe('open')
-          }
+          expect(seen.has(`${tx},${tz}`)).toBe(true)
         }
       })
 

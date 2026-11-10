@@ -1,5 +1,4 @@
 import type { Connection } from '../engine/net/client'
-import { TEAMS } from '../games/bedwars/blocks'
 import { bedwarsCodec, type ClientMessage, type ServerMessage } from '../games/bedwars/protocol'
 import { createBedwarsRoom, type RoomParams } from '../games/bedwars/server'
 import type { Room } from '../games/bedwars/room'
@@ -104,7 +103,7 @@ export class RelayGame implements Connection<ClientMessage, ServerMessage> {
             this.handler(m)
           }).id
         }
-        const capacity = this.options.world === 'sandbox' ? 16 : TEAMS.length * this.options.teamSize
+        const capacity = this.options.world === 'sandbox' ? 16 : this.options.size
         const present = new Set<string>()
         for (const { member, data } of members) {
           if (member.connectionId === this.self) continue

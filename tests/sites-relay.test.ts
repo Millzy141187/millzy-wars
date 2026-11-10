@@ -20,7 +20,7 @@ function harness() {
     const member = { connectionId: crypto.randomUUID(), userId: crypto.randomUUID(), data: null } as Member
     const messages: ServerMessage[] = [], errors: string[] = []
     const client = { member, messages, errors, connected: true, game: null as unknown as RelayGame }
-    client.game = new RelayGame({ name: hosting ? 'Host' : 'Guest', hosting, world: 'arena', room: 'test', fast: false, teamSize: 1 }, {
+    client.game = new RelayGame({ name: hosting ? 'Host' : 'Guest', hosting, world: 'arena', room: 'test', fast: false, size: 4 }, {
       presence(data) { member.data = data; presence(); return true },
       broadcast(event, data) {
         const encoded = JSON.stringify({ type: 'broadcast', event, data, userId: member.userId, connectionId: member.connectionId })

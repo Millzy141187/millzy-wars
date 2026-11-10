@@ -238,9 +238,9 @@ const village: Theme = {
     for (const [hx, hz] of corners(x, z, 3)) if (rnd() < 0.5) b.bump(hx, top, hz, HAY)
     meadow(b, x, top, z, rnd, plants, [GRASS], 4, 0.4)
   },
-  middle(b, mid, top, radius, safe, rnd) {
-    if (safe) throw new Error('The village square is built for a corner arena, off every lane')
+  middle(b, mid, top, radius, _safe, rnd) {
     // A brick-paved square with a fountain in the middle, lantern posts, cobbled paths to the corners and four cottages.
+    // Eight-bed arenas run lanes across the square; the builder carves their headroom afterwards.
     const lane = blend(23, [COBBLESTONE, 2], [GRAVEL, 1])
     for (let dx = -radius - 2; dx <= radius + 2; dx++)
       for (let dz = -radius - 2; dz <= radius + 2; dz++) {
@@ -409,8 +409,8 @@ const frost: Theme = {
     const cells = groundCells(b, x - 4, z - 4, x + 4, z + 4, top, [SNOWY_GRASS]).filter(([cx, cz]) => Math.max(Math.abs(cx - x), Math.abs(cz - z)) > 2)
     for (const [cx, cz] of spread(cells, rnd, 2, 3)) (safe ? b.bump(cx, top, cz, SNOW) : iceSpike(b, cx, top, cz, rnd))
   },
-  middle(b, mid, top, _radius, safe, rnd) {
-    if (safe) throw new Error('The frozen tower is built for a corner arena, off every lane')
+  middle(b, mid, top, _radius, _safe, rnd) {
+    // Eight-bed arenas carve their lanes through the tower's hall afterwards.
     frozenTower(b, mid, top)
     for (const [x, z] of corners(mid, mid, 8)) conifer(b, x, top, z, rnd, SPRUCE_LOG, SPRUCE_LEAVES, true, 9)
     return [[mid - 1, mid], [mid + 1, mid]]

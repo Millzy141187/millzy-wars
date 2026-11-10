@@ -267,9 +267,10 @@ two variables into `.env.local` for a local build.
 - Channels are public and named from the room code
   (`bedwars-arena-<code>-normal`). Anyone with the anon key and the code can join
   or send traffic: casual play, host-trusted, no anti-cheat or rankings.
-- Four, eight or sixteen players per room (the host picks the size), the host
-  keeps the tab open and visible, and a host that leaves ends the match after a
-  15-second grace period.
+- Four beds for four players, eight beds for eight players, or eight beds with
+  two players each for sixteen: the host picks the size. The host keeps the tab
+  open and visible, and a host that leaves ends the match after a 15-second
+  grace period.
 - The anon/publishable key is public by design; never put the service-role key in
   this build.
 - Without those variables the client keeps using the Sites transport, so the Sites

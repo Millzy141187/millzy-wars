@@ -52,7 +52,7 @@ function start(options: JoinOptions, offline: boolean) {
   // Put the join in the address, so reloading (or "Try again") rejoins the same room.
   const query = new URLSearchParams({ play: '1', name: options.name, world: options.world, room: options.room })
   if (options.fast) query.set('fast', '1')
-  if (options.teamSize > 1) query.set('size', String(options.teamSize * 4))
+  if (options.size > 4) query.set('size', String(options.size))
   if (!__SITES__ && options.private) query.set('private', '1')
   if (offline) query.set('offline', '1')
   if (__SITES__ && options.hosting && !offline) query.set('host', '1')
@@ -72,7 +72,7 @@ function start(options: JoinOptions, offline: boolean) {
           world: options.world,
           room: options.room,
           ...(options.fast ? { fast: '1' } : {}),
-          ...(options.teamSize > 1 ? { size: String(options.teamSize * 4) } : {}),
+          ...(options.size > 4 ? { size: String(options.size) } : {}),
           ...(options.private ? { private: '1' } : {}),
         },
         bedwarsCodec,
@@ -84,13 +84,13 @@ function start(options: JoinOptions, offline: boolean) {
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 
-const TEAM_SIZES: Record<string, 1 | 2 | 4> = { '4': 1, '8': 2, '16': 4 }
+const MATCH_SIZES: Record<string, 4 | 8 | 16> = { '4': 4, '8': 8, '16': 16 }
 const sizeOptions = () =>
-  '<option value="4">4 players · 1 per team</option><option value="8">8 players · 2 per team</option><option value="16">16 players · 4 per team</option>'
+  '<option value="4">4 players · 4 beds</option><option value="8">8 players · 8 beds</option><option value="16">16 players · 8 beds, 2 each</option>'
 
-/** The match size picked on the screen, in seats per team. */
-function readTeamSize(card: Element): 1 | 2 | 4 {
-  return TEAM_SIZES[(card.querySelector('#size') as HTMLSelectElement | null)?.value ?? '4'] ?? 1
+/** The match size picked on the screen, in players. */
+function readSize(card: Element): 4 | 8 | 16 {
+  return MATCH_SIZES[(card.querySelector('#size') as HTMLSelectElement | null)?.value ?? '4'] ?? 4
 }
 
 /** "5 playing online now", for the menu, or nothing when there is no server to ask. */
@@ -155,7 +155,7 @@ function menu() {
         online()
         return
       }
-      start({ name, world: go === 'sandbox' ? 'sandbox' : 'arena', room: 'main', fast: false, teamSize: 1 }, true)
+      start({ name, world: go === 'sandbox' ? 'sandbox' : 'arena', room: 'main', fast: false, size: 4 }, true)
     }),
   )
 }
@@ -198,10 +198,10 @@ function online(invite?: { room: string; private: boolean; fast: boolean }) {
     <label class="field check"><input id="fast" type="checkbox"> <span>Fast round: the timeline runs ten times quicker</span></label>
     <p class="muted small">Typing the name of a room that exists joins it. Rounds start when two people are in; the host can start sooner with bots.</p>`
   let rooms: RoomInfo[] = []
-  const join = (room: string, options: { private?: boolean; fast?: boolean; world?: 'arena' | 'sandbox'; teamSize?: 1 | 2 | 4 } = {}) => {
+  const join = (room: string, options: { private?: boolean; fast?: boolean; world?: 'arena' | 'sandbox'; size?: 4 | 8 | 16 } = {}) => {
     const name = playerName()
     saveName(name)
-    start({ name, world: options.world ?? 'arena', room, fast: !!options.fast, teamSize: options.teamSize ?? 1, private: !!options.private }, false)
+    start({ name, world: options.world ?? 'arena', room, fast: !!options.fast, size: options.size ?? 4, private: !!options.private }, false)
   }
   const list = card.querySelector('#rooms')!
   const render = (data: RoomList | null) => {
@@ -239,7 +239,7 @@ function online(invite?: { room: string; private: boolean; fast: boolean }) {
     join(room, {
       private: (card.querySelector('#private') as HTMLInputElement).checked,
       fast: (card.querySelector('#fast') as HTMLInputElement).checked,
-      teamSize: readTeamSize(card),
+      size: readSize(card),
     })
   })
 }
@@ -249,7 +249,7 @@ function sitesOnline(invite?: { room: string; fast: boolean }) {
   const card = app.querySelector('.menu-card')!
   card.innerHTML = `
     <div class="online-head"><h2>Play with friends</h2><button class="btn ghost" data-act="back">Back</button></div>
-    <p class="lead">Choose 4, 8 or 16 players. The host runs the match; keep the host's tab open and visible. Closing it ends the match.</p>
+    <p class="lead">Choose a 4-bed or 8-bed map. The 16-player match puts two players on each of the eight beds. The host runs the match; keep the host's tab open and visible.</p>
     <label class="field"><span>Your name</span><input id="name" maxlength="16" value="${esc(savedName())}" placeholder="Your name"></label>
     <label class="field"><span>Room code</span><input id="room" maxlength="32" value="${esc(invite?.room ?? randomRoomName())}"></label>
     <label class="field"><span>Players</span><select id="size">${sizeOptions()}</select></label>
@@ -269,7 +269,7 @@ function sitesOnline(invite?: { room: string; fast: boolean }) {
         room,
         world: 'arena',
         fast: (card.querySelector('#fast') as HTMLInputElement).checked,
-        teamSize: action === 'host' ? readTeamSize(card) : 1,
+        size: action === 'host' ? readSize(card) : 4,
         hosting: action === 'host',
       },
       false,
@@ -302,7 +302,7 @@ if (params.get('play') === '1') {
       world: params.get('world') === 'sandbox' ? 'sandbox' : 'arena',
       room: params.get('room') ?? 'main',
       fast: params.get('fast') === '1',
-      teamSize: params.get('size') === '16' ? 4 : params.get('size') === '8' ? 2 : 1,
+      size: params.get('size') === '16' ? 16 : params.get('size') === '8' ? 8 : 4,
       private: params.get('private') === '1',
       hosting: params.get('host') === '1',
     },

@@ -8,6 +8,7 @@ import { reachDistance, swingReaches } from '../../engine/melee'
 import { forwardOf, IDLE_INPUT, lookDirection, playerBox, type MoveInput } from '../../engine/physics'
 import { raycastBlock } from '../../engine/raycast'
 import type { BotLevel } from './rules'
+import { baseFootprint, botRoute } from './maps/plan'
 import { OFFERS, TOOL_TIER_COST, UPGRADES, type UpgradeId } from './shop'
 import type { Brain, Player, Room } from './room'
 
@@ -247,7 +248,7 @@ export class Bot implements Brain {
   private trips = 0
   private geared = false
   private upgraded = false
-  /** Start and corner of the current trip out, to retrace on the way home. */
+  /** Waypoints of the current trip out, to retrace on the way home. */
   private trail: [number, number][] = []
   /** Set by walkTo when a gap needs bridging and there is nothing to bridge with. */
   private outOfBlocks = false
@@ -676,13 +677,14 @@ export class Bot implements Brain {
     this.target = pick.team
     const base = room.map.bases.find((b) => b.team === pick.team)!
     const goal: [number, number] = pick.bed ? [base.bed.x + 0.5 - base.bed.dx * 2, base.bed.z + 0.5 - base.bed.dz * 2] : [base.spawn[0], base.spawn[2]]
-    // Leave along our own base's axis (through the middle), then turn toward the target.
+    // Leave along our own base's axis, or around the middle when a base is in the way.
     const own = this.base(room)
     const alongZ = Math.abs(own.center[0] - room.world.sx / 2) < 1
     const here: [number, number] = [Math.floor(p.x) + 0.5, Math.floor(p.z) + 0.5]
-    const corner: [number, number] = alongZ ? [here[0], goal[1]] : [goal[0], here[1]]
-    this.path = [here, corner, goal]
-    this.trail = [here, corner]
+    const feet = room.map.bases.map(baseFootprint)
+    const route = botRoute(here, goal, own.team, pick.team, feet, alongZ)
+    this.path = route
+    this.trail = route.slice(0, -1)
     this.setGoal(room, 'raid')
     return this.raid(room, p)
   }
@@ -711,9 +713,7 @@ export class Bot implements Brain {
 
   private goHome(room: Room, p: Player): MoveInput {
     // Walk back over the bridge we built: the legs of the way out, reversed.
-    const [origin, corner] = this.trail
-    const pastCorner = this.path.length <= 1
-    this.path = origin ? (pastCorner ? [corner, origin] : [origin]) : [[this.base(room).spawn[0], this.base(room).spawn[2]]]
+    this.path = this.trail.length ? [...this.trail].reverse() : [[this.base(room).spawn[0], this.base(room).spawn[2]]]
     this.setGoal(room, 'home')
     return this.followPath(room, p, () => this.setGoal(room, 'gather'))
   }

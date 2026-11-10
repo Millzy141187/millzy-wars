@@ -3,10 +3,28 @@ import { AIR, BLOCKS, blockDef, defineBlock as block, type BlockInput } from '..
 export { AIR, BLOCKS, blockDef }
 
 export type Tool = 'pickaxe' | 'axe' | 'shears'
-export type TeamId = 'red' | 'blue' | 'green' | 'yellow'
-export const TEAMS: TeamId[] = ['red', 'blue', 'green', 'yellow']
-export const TEAM_COLORS: Record<TeamId, string> = { red: '#e0473e', blue: '#3e6fe0', green: '#45b04a', yellow: '#e6c43a' }
-export const TEAM_NAMES: Record<TeamId, string> = { red: 'Red', blue: 'Blue', green: 'Green', yellow: 'Yellow' }
+export type TeamId = 'red' | 'blue' | 'green' | 'yellow' | 'orange' | 'purple' | 'cyan' | 'pink'
+export const TEAMS: TeamId[] = ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'cyan', 'pink']
+export const TEAM_COLORS: Record<TeamId, string> = {
+  red: '#e0473e',
+  blue: '#3e6fe0',
+  green: '#45b04a',
+  yellow: '#e6c43a',
+  orange: '#e08a3a',
+  purple: '#9b5bd6',
+  cyan: '#2fb6b0',
+  pink: '#e05b9a',
+}
+export const TEAM_NAMES: Record<TeamId, string> = {
+  red: 'Red',
+  blue: 'Blue',
+  green: 'Green',
+  yellow: 'Yellow',
+  orange: 'Orange',
+  purple: 'Purple',
+  cyan: 'Cyan',
+  pink: 'Pink',
+}
 
 export const GRASS = block({ name: 'Grass', hardness: 0.6, tool: 'axe', texture: { top: '#6aa84f', side: '#8a6a45', bottom: '#7a5a3a', pattern: 'grass' } })
 export const DIRT = block({ name: 'Dirt', hardness: 0.5, texture: { top: '#7a5a3a', side: '#7a5a3a', pattern: 'noise' } })
