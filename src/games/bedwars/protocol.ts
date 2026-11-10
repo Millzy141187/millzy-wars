@@ -96,6 +96,8 @@ export interface TeamView {
   team: TeamId
   bed: boolean
   players: number
+  /** Human seats available on this team; configured bots use separate seats. */
+  capacity: number
   alive: number
   eliminated: boolean
 }
@@ -250,7 +252,7 @@ function writeGame(w: ByteWriter, g: GameView) {
   w.stringOrNull(g.next?.label ?? null)
   if (g.next) w.int(g.next.in)
   w.uint(g.teams.length)
-  for (const t of g.teams) w.string(t.team).bool(t.bed).uint(t.players).uint(t.alive).bool(t.eliminated)
+  for (const t of g.teams) w.string(t.team).bool(t.bed).uint(t.players).uint(t.capacity).uint(t.alive).bool(t.eliminated)
   w.uint(g.host === null ? 0 : g.host + 1)
   w.bool(g.bots).stringOrNull(g.winner)
 }
@@ -262,7 +264,7 @@ function readGame(r: ByteReader): GameView {
   const clockTick = r.uint()
   const label = r.stringOrNull()
   const next = label === null ? null : { label, in: r.int() }
-  const teams: TeamView[] = Array.from({ length: r.uint() }, () => ({ team: r.string() as TeamId, bed: r.bool(), players: r.uint(), alive: r.uint(), eliminated: r.bool() }))
+  const teams: TeamView[] = Array.from({ length: r.uint() }, () => ({ team: r.string() as TeamId, bed: r.bool(), players: r.uint(), capacity: r.uint(), alive: r.uint(), eliminated: r.bool() }))
   const host = r.uint()
   return { phase, mode, clock, clockTick, next, teams, host: host === 0 ? null : host - 1, bots: r.bool(), winner: r.stringOrNull() as GameView['winner'] }
 }

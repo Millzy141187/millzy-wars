@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { TICK_MS } from '../engine/constants'
 import { RelayGame, type RelayMessage } from '../sites/relay'
 import { FLUSH_MS } from '../sites/wire'
+import { encodeTeamSetup } from '../games/bedwars/setup'
 import { supabaseRealtime, type Channel } from './realtime'
 
 // A publishable/anon key is public by design; it is baked into the bundle.
@@ -22,7 +23,8 @@ export const supabaseConfigured = Boolean(url && anonKey)
 export function connectSupabase(options: RelayGame['options']) {
   if (!url || !anonKey) throw new Error('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
   // Channel names only use characters every Realtime topic accepts.
-  const topic = `bedwars-${options.world}-${options.room}-${options.fast ? 'fast' : 'normal'}`
+  const setup = options.teamSetup ? encodeTeamSetup(options.teamSetup) : `preset-${options.size}`
+  const topic = `bedwars-${options.world}-${options.room}-${options.fast ? 'fast' : 'normal'}-${setup.replace(/[^a-z0-9-]/gi, '-')}`
   const client = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } })
   let game!: RelayGame
   const realtime = supabaseRealtime(
@@ -50,7 +52,10 @@ export function connectSupabase(options: RelayGame['options']) {
       carry -= TICK_MS
     }
     if (carry > TICK_MS * 5) carry = 0
-    if (now - flushed >= FLUSH_MS) {
+    // Supabase frames need one flush to send and the next to consume only after
+    // its acknowledgement; checking twice per frame interval keeps delivery at
+    // the existing ten broadcasts per second without outrunning acknowledgments.
+    if (now - flushed >= FLUSH_MS / 2) {
       game.flush()
       flushed = now
     }

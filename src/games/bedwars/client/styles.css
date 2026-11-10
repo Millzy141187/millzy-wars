@@ -80,6 +80,11 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 6px; background: var(
 .field { display: grid; gap: 6px; margin: 0 0 12px; font-size: 14px; color: var(--window-dim); }
 .field input:not([type]), .field input[type=text] { height: 38px; padding: 0 10px; border: 2px solid #a0a0a0; outline: 2px solid #000; background: #000; color: #fff; font: 16px var(--font); }
 .field.check { display: flex; align-items: center; gap: 8px; }
+.team-setup { margin: 8px 0 14px; padding: 12px; background: rgba(0,0,0,0.25); border: 2px solid rgba(255,255,255,0.16); }
+.team-setup-row { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.team-setup-row label { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 5px; font-size: 12px; }
+.team-setup-row select, #team-count { min-width: 0; padding: 4px; background: #17120f; color: white; border: 1px solid #8d7b6b; font: inherit; }
+.error-line { min-height: 1em; margin: 4px 0 0; color: #ff8585; font-size: 12px; }
 .menu-buttons { display: grid; gap: 8px; margin: 4px 0 12px; }
 .menu-buttons .btn { height: 44px; font-size: 18px; }
 .settings summary { cursor: pointer; color: var(--window-dim); margin-bottom: 10px; }

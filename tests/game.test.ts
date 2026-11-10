@@ -510,6 +510,7 @@ describe('map vote', () => {
     expect(b.last('votes')!.maps.find((m) => m.id === 'lanterns')!.votes).toBe(2)
     a.send({ t: 'team', team: 'red' })
     b.send({ t: 'team', team: 'blue' })
+    a.send({ t: 'start' })
     ticks(room, 25)
     expect(room.phase).toBe('playing')
     expect(room.mapId).toBe('lanterns')

@@ -35,8 +35,9 @@ export class Inbox {
   private text = ''
   private offset = 0
   read(offset: number, data: string): string[] {
-    if (offset !== this.offset || typeof data !== 'string' || data.length > FRAME_BYTES || this.text.length + data.length > MAX_BUFFER)
-      throw new Error('Game stream interrupted. Rejoin for a fresh snapshot.')
+    if (offset !== this.offset) throw new Error(`Game stream interrupted by an out-of-order frame (${offset} received, ${this.offset} expected). Rejoin for a fresh snapshot.`)
+    if (typeof data !== 'string' || data.length > FRAME_BYTES || this.text.length + data.length > MAX_BUFFER)
+      throw new Error('Game stream interrupted by an oversized frame. Rejoin for a fresh snapshot.')
     this.offset += data.length
     this.text += data
     const lines = this.text.split('\n')

@@ -42,6 +42,22 @@ describe('the room list', () => {
     expect(sixteen.map.bases).toHaveLength(8)
   })
 
+  test('custom rosters keep human limits and create the requested bots per team', () => {
+    const room = createBedwarsRoom(roomParams(params('room=custom&teams=red:1:1,blue:3:0,green:2:2')))
+    const people = ['Ash', 'Bea', 'Cy', 'Dee', 'Eli', 'Fox'].map((name) => new TestClient(room, name))
+    people[0].send({ t: 'team', team: 'red' })
+    for (const p of people.slice(1, 4)) p.send({ t: 'team', team: 'blue' })
+    for (const p of people.slice(4)) p.send({ t: 'team', team: 'green' })
+    const extra = new TestClient(room, 'Gray')
+    extra.send({ t: 'team', team: 'blue' })
+    expect(extra.events('error').join()).toContain('Blue is full')
+    room.startRound()
+    expect(room.summary()).toMatchObject({ capacity: 6, teams: 'red:1:1,blue:3:0,green:2:2' })
+    expect([...room.players.values()].filter((p) => p.brain && p.team === 'red')).toHaveLength(1)
+    expect([...room.players.values()].filter((p) => p.brain && p.team === 'blue')).toHaveLength(0)
+    expect([...room.players.values()].filter((p) => p.brain && p.team === 'green')).toHaveLength(2)
+  })
+
   test('sandbox training dummies are not counted as bots', () => {
     const sandbox = createBedwarsRoom(roomParams(params('room=practice&world=sandbox')))
     new TestClient(sandbox, 'Ash')

@@ -61,6 +61,7 @@ export function duel(overrides: Partial<GameRules> = {}) {
   const b = new TestClient(room, 'Bea')
   a.send({ t: 'team', team: 'red' })
   b.send({ t: 'team', team: 'blue' })
+  a.send({ t: 'start' })
   ticks(room, 25)
   return { room, a, b }
 }

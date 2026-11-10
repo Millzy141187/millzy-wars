@@ -1,6 +1,7 @@
 import { TEAM_COLORS, TEAM_NAMES, type TeamId } from '../blocks'
 import { BRAND, MAX_HEALTH, TPS } from '../constants'
 import { OFFERS, TOOL_TIER_COST, UPGRADES, type Offer, type OfferCategory } from '../shop'
+import { parseTeamSetup } from '../setup'
 import { countItem, HOTBAR, INVENTORY_SIZE } from '../../../engine/inventory'
 import { ARMOR_ORDER, AXES, item, PICKAXES } from '../items'
 import type { ServerMessage } from '../protocol'
@@ -460,7 +461,8 @@ export class Hud {
     const teamButtons = view.teams
       .map(({ team: t }) => {
         const n = g.views.filter((p) => p.team === t).length
-        return `<button class="btn team${self.team === t ? ' chosen' : ''}" data-team="${t}" style="--team:${TEAM_COLORS[t]}"><i></i>${TEAM_NAMES[t]}<span>${n}</span></button>`
+        const capacity = view.teams.find((team) => team.team === t)?.capacity ?? 1
+        return `<button class="btn team${self.team === t ? ' chosen' : ''}" data-team="${t}" style="--team:${TEAM_COLORS[t]}"><i></i>${TEAM_NAMES[t]}<span>${n}/${capacity}</span></button>`
       })
       .join('')
     const humans = people.length
@@ -471,7 +473,7 @@ export class Hud {
     }
     const q = new URLSearchParams(location.search)
     const roomName = q.get('room') ?? 'main'
-    const invite = g.mode.offline ? null : inviteLink(roomName, { private: q.get('private') === '1', fast: q.get('fast') === '1' })
+    const invite = g.mode.offline ? null : inviteLink(roomName, { private: q.get('private') === '1', fast: q.get('fast') === '1', size: Number(q.get('size') ?? 4), teamSetup: parseTeamSetup(q.get('teams')) })
     const status =
       view.phase === 'countdown'
         ? `The round starts in ${Math.ceil(g.clock() / TPS)} seconds.`
@@ -490,6 +492,7 @@ export class Hud {
       <p class="label">In this room (${humans})</p>
       <ul class="roster">${roster}</ul>
       ${view.bots ? `<p class="muted small">${levelName(g.botLevel)} bots fill empty teams when the round starts; anyone who joins mid-round takes a bot's place.</p>` : ''}
+      ${parseTeamSetup(q.get('teams')) ? `<p class="muted small">${parseTeamSetup(q.get('teams'))!.map((t) => `${TEAM_NAMES[t.team]}: ${t.players} player${t.players === 1 ? '' : 's'} + ${t.bots} bot${t.bots === 1 ? '' : 's'}`).join(' · ')}</p>` : ''}
       <p class="label">Team</p>
       <div class="team-grid">${teamButtons}</div>
       ${g.votes ? `<p class="label">Arena</p><div class="map-grid">${g.votes.maps.map((m) => `<button class="btn map${g.myVote === m.id ? ' chosen' : ''}" data-map="${m.id}">${m.name}<span>${m.votes}</span></button>`).join('')}</div>` : ''}
@@ -642,10 +645,10 @@ export class Hud {
         else {
           const a = this.pickedSlot
           this.pickedSlot = null
-          if (a !== i) {
-            ;[self.inventory[a], self.inventory[i]] = [self.inventory[i], self.inventory[a]]
-            this.game.send({ t: 'swap', a, b: i })
-          }
+          // Keep the authoritative server inventory as the source of truth.
+          // Optimistically swapping this array races the next self snapshot and
+          // can make a successful move appear to jump back or do nothing.
+          if (a !== i) this.game.send({ t: 'swap', a, b: i })
         }
         this.renderModal()
       }),

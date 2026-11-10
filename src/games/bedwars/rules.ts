@@ -18,6 +18,10 @@ export interface GameRules {
   mode: 'arena' | 'sandbox'
   teams: TeamId[]
   teamSize: number
+  /** Maximum number of human players allowed on each team, when configured. */
+  teamPlayerLimits?: Partial<Record<TeamId, number>>
+  /** Exact bot count per team, when configured; otherwise bots fill open slots. */
+  teamBotCounts?: Partial<Record<TeamId, number>>
   countdownTicks: number
   /** Fill empty seats with bots when the round starts. */
   bots: boolean

@@ -46,6 +46,8 @@ export function supabaseRealtime(
   let version = 0
   let attempt = 0
   let retry: ReturnType<typeof setTimeout> | undefined
+  let broadcastInFlight = false
+  let broadcastTimeout: ReturnType<typeof setTimeout> | undefined
 
   const clearRetry = () => {
     if (retry === undefined) return
@@ -54,6 +56,9 @@ export function supabaseRealtime(
   }
   const disconnected = () => {
     live = false
+    broadcastInFlight = false
+    if (broadcastTimeout !== undefined) clearTimeout(broadcastTimeout)
+    broadcastTimeout = undefined
     status('disconnected')
   }
   const schedule = () => {
@@ -126,10 +131,40 @@ export function supabaseRealtime(
   return {
     broadcast(event, data) {
       if (!live || !channel) return false
-      void channel.send({ type: 'broadcast', event, payload: { from: connectionId, data } }).catch(() => {
+      if (broadcastInFlight) return false
+      const current = channel
+      broadcastInFlight = true
+      broadcastTimeout = setTimeout(() => {
+        if (channel !== current || !live || !broadcastInFlight) return
+        disconnected()
+        schedule()
+      }, 5_000)
+      let sent: Promise<unknown>
+      try {
+        sent = current.send({ type: 'broadcast', event, payload: { from: connectionId, data } })
+      } catch {
+        disconnected()
+        schedule()
+        return false
+      }
+      void Promise.resolve(sent).then((result) => {
+        if (channel !== current || !live) return
+        if (broadcastTimeout !== undefined) clearTimeout(broadcastTimeout)
+        broadcastTimeout = undefined
+        const responseStatus = typeof result === 'string' ? result : result && typeof result === 'object' && 'status' in result ? (result as { status?: unknown }).status : undefined
+        if (responseStatus !== undefined && responseStatus !== 'ok') {
+          disconnected()
+          schedule()
+          return
+        }
+        broadcastInFlight = false
+      }).catch(() => {
+        if (channel !== current || !live) return
         disconnected()
         schedule()
       })
+      // Let RelayGame advance this frame, but hold later frames until the
+      // Supabase result arrives so one rejected packet cannot create a stream gap.
       return true
     },
     presence(data) {

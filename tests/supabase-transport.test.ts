@@ -78,12 +78,13 @@ function harness() {
     drain()
     return client
   }
-  const step = (count = 1) => {
+  const step = async (count = 1) => {
     for (let n = 0; n < count; n++) {
       now += 50
       for (const c of clients) c.game.tick()
       if (now % 100 === 0) for (const c of clients) c.game.flush()
       drain()
+      await Promise.resolve()
     }
   }
   return { add, step, stats: b.stats }
@@ -112,19 +113,60 @@ function controlledChannel() {
 }
 
 describe('Supabase game transport', () => {
-  test('four players meet, receive worlds and share chat over public channels', () => {
+  test('allows only one frame in flight until Supabase acknowledges it', async () => {
+    let complete: ((result: unknown) => void) | undefined
+    let sends = 0
+    const channel: Channel = {
+      on() { return channel },
+      subscribe(callback) { callback('SUBSCRIBED'); return channel },
+      async track() { return 'ok' },
+      send() { sends++; return new Promise((resolve) => { complete = resolve }) },
+      presenceState: <T>() => ({}) as Record<string, T[]>,
+      async unsubscribe() { return 'ok' },
+    }
+    const states: string[] = []
+    const realtime = supabaseRealtime(() => channel, () => {}, (state) => states.push(state))
+    const frame = [['peer', 'generation', 0, 'packet']]
+    expect(realtime.broadcast('game', frame)).toBe(true)
+    expect(realtime.broadcast('game', frame)).toBe(false)
+    expect(sends).toBe(1)
+    complete?.({ status: 'ok' })
+    await new Promise((done) => setTimeout(done, 0))
+    expect(realtime.broadcast('game', [['peer', 'generation', 1, 'next']])).toBe(true)
+    expect(sends).toBe(2)
+    realtime.close()
+  })
+
+  test('treats a Supabase rejected frame as a disconnect so streams resync', async () => {
+    const channel: Channel = {
+      on() { return channel },
+      subscribe(callback) { callback('SUBSCRIBED'); return channel },
+      async track() { return 'ok' },
+      async send() { return { status: 'error', error: 'rate limited' } },
+      presenceState: <T>() => ({}) as Record<string, T[]>,
+      async unsubscribe() { return 'ok' },
+    }
+    const states: string[] = []
+    const realtime = supabaseRealtime(() => channel, () => {}, (state) => states.push(state))
+    expect(realtime.broadcast('game', [['peer', 'generation', 0, 'packet']])).toBe(true)
+    await new Promise((done) => setTimeout(done, 0))
+    expect(states).toContain('disconnected')
+    realtime.close()
+  })
+
+  test('four players meet, receive worlds and share chat over public channels', async () => {
     const h = harness()
     const host = h.add(true, 'Host')
-    h.step(4)
+    await h.step(4)
     const guests = [h.add(false, 'Ada'), h.add(false, 'Bo'), h.add(false, 'Cy')]
-    h.step(140)
+    await h.step(140)
     for (const c of [host, ...guests]) {
       expect(c.errors).toEqual([])
       expect(c.messages.some((m) => m.t === 'welcome')).toBe(true)
       expect(c.messages.some((m) => m.t === 'self')).toBe(true)
     }
     guests[0].game.send({ t: 'chat', text: 'hello over supabase' })
-    h.step(30)
+    await h.step(30)
     expect(host.messages.some((m) => m.t === 'event' && m.text.includes('hello over supabase'))).toBe(true)
     expect(guests[2].messages.some((m) => m.t === 'event' && m.text.includes('hello over supabase'))).toBe(true)
     // The relay's 12 KiB frame budget is what Supabase's broadcast payload carries.
@@ -155,16 +197,16 @@ describe('Supabase game transport', () => {
     expect(made[1].calls.removed).toBe(1)
   })
 
-  test('a guest leaving frees its seat for another player', () => {
+  test('a guest leaving frees its seat for another player', async () => {
     const h = harness()
     const host = h.add(true, 'Host')
-    h.step(4)
+    await h.step(4)
     const first = h.add(false, 'First')
-    h.step(60)
+    await h.step(60)
     first.game.close()
-    h.step(400)
+    await h.step(400)
     const late = h.add(false, 'Late')
-    h.step(120)
+    await h.step(120)
     expect(host.errors).toEqual([])
     expect(late.errors).toEqual([])
     expect(late.messages.some((m) => m.t === 'welcome')).toBe(true)

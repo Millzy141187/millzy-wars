@@ -32,6 +32,7 @@ import type { ClientMessage, DropView, EventKind, GameView, Phase, PlayerDelta, 
 import { raycastBlock } from '../../engine/raycast'
 import { rng } from '../../engine/random'
 import { toBase64 } from '../../engine/world'
+import { encodeTeamSetup } from './setup'
 import {
   BASE_RADIUS,
   FORGE_EMERALD_INTERVAL,
@@ -351,7 +352,8 @@ export class Room {
       map: this.map.name,
       players,
       bots,
-      capacity: this.rules.mode === 'sandbox' ? 16 : this.rules.teams.length * this.rules.teamSize,
+      capacity: this.rules.mode === 'sandbox' ? 16 : this.rules.teams.reduce((sum, team) => sum + (this.rules.teamPlayerLimits?.[team] ?? this.rules.teamSize), 0),
+      ...(p.teamSetup ? { teams: encodeTeamSetup(p.teamSetup) } : {}),
     }
   }
 
@@ -690,8 +692,8 @@ export class Room {
   private onTeam(p: Player, team: TeamId): void {
     if (this.phase !== 'waiting' && this.phase !== 'countdown') return
     if (!this.rules.teams.includes(team)) return
-    const count = [...this.players.values()].filter((q) => q.team === team && q !== p).length
-    if (count >= this.rules.teamSize) return this.event(p, 'error', `${TEAM_NAMES[team]} is full.`)
+    const count = [...this.players.values()].filter((q) => q.team === team && q !== p && !q.brain).length
+    if (count >= (this.rules.teamPlayerLimits?.[team] ?? this.rules.teamSize)) return this.event(p, 'error', `${TEAM_NAMES[team]} is full.`)
     p.team = team
   }
 
@@ -950,24 +952,33 @@ export class Room {
       for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) this.world.set(x, y, z, AIR)
     }
     const members = (team: TeamId) => [...this.players.values()].filter((p) => p.team === team).length
+    const humans = (team: TeamId) => [...this.players.values()].filter((p) => p.team === team && !p.brain).length
     for (const p of this.humans()) {
       if (p.team) continue
-      const open = this.rules.teams.filter((t) => members(t) < this.rules.teamSize)
+      const open = this.rules.teams.filter((t) => humans(t) < (this.rules.teamPlayerLimits?.[t] ?? this.rules.teamSize))
       if (open.length === 0) {
         p.eliminated = true
         p.alive = false
         continue
       }
-      open.sort((a, b) => members(a) - members(b))
+      open.sort((a, b) => humans(a) - humans(b))
       p.team = open[0]
     }
     if (this.botsEnabled && this.createBot)
-      for (const team of this.rules.teams)
-        while (members(team) < this.rules.teamSize) {
+      for (const team of this.rules.teams) {
+        const configured = this.rules.teamBotCounts?.[team]
+        if (configured !== undefined) {
+          for (let i = 0; i < configured; i++) {
+            const taken = new Set([...this.players.values()].map((q) => q.name))
+            const bot = this.connect(botName(this.random, taken), null, this.createBot(this, team))
+            bot.team = team
+          }
+        } else while (members(team) < this.rules.teamSize) {
           const taken = new Set([...this.players.values()].map((q) => q.name))
           const bot = this.connect(botName(this.random, taken), null, this.createBot(this, team))
           bot.team = team
         }
+      }
 
     for (const state of this.teams.values()) {
       if (members(state.team) > 0) continue
@@ -1324,7 +1335,7 @@ export class Room {
       next: next ? { label: next.label, in: next.at - elapsed } : null,
       teams: [...this.teams.values()].map((t) => {
         const members = [...this.players.values()].filter((p) => p.team === t.team)
-        return { team: t.team, bed: t.bed, players: members.length, alive: members.filter((p) => !p.eliminated).length, eliminated: t.eliminated }
+        return { team: t.team, bed: t.bed, players: members.length, capacity: this.rules.teamPlayerLimits?.[t.team] ?? this.rules.teamSize, alive: members.filter((p) => !p.eliminated).length, eliminated: t.eliminated }
       }),
       host: this.hostId,
       bots: this.botsEnabled,

@@ -13,6 +13,8 @@ import { FREEBUFF_MARK, freebuffUrl, promoShown } from './promo'
 import '@fontsource/pixelify-sans/400.css'
 import '@fontsource/pixelify-sans/700.css'
 import { drawTile } from '../../../engine/render/textures'
+import { TEAMS, TEAM_NAMES, type TeamId } from '../blocks'
+import { encodeTeamSetup, parseTeamSetup, teamSetupCapacity, type TeamSetup } from '../setup'
 import './styles.css'
 
 type JoinOptions = RoomParams & { name: string; hosting?: boolean }
@@ -61,6 +63,7 @@ function start(options: JoinOptions, offline: boolean) {
   const query = new URLSearchParams({ play: '1', name: options.name, world: options.world, room: options.room })
   if (options.fast) query.set('fast', '1')
   if (options.size > 4) query.set('size', String(options.size))
+  if (options.teamSetup) query.set('teams', encodeTeamSetup(options.teamSetup))
   if (!__SITES__ && options.private) query.set('private', '1')
   if (offline) query.set('offline', '1')
   if (__SITES__ && options.hosting && !offline) query.set('host', '1')
@@ -81,6 +84,7 @@ function start(options: JoinOptions, offline: boolean) {
           room: options.room,
           ...(options.fast ? { fast: '1' } : {}),
           ...(options.size > 4 ? { size: String(options.size) } : {}),
+          ...(options.teamSetup ? { teams: encodeTeamSetup(options.teamSetup) } : {}),
           ...(options.private ? { private: '1' } : {}),
         },
         bedwarsCodec,
@@ -95,6 +99,48 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 const MATCH_SIZES: Record<string, 4 | 8 | 16> = { '4': 4, '8': 8, '16': 16 }
 const sizeOptions = () =>
   '<option value="4">4 players · 4 beds</option><option value="8">8 players · 8 beds</option><option value="16">16 players · 8 beds, 2 each</option>'
+
+function setupRows(count: number): string {
+  return TEAMS.slice(0, count).map((team) => `<div class="team-setup-row"><b style="color:${teamColor(team)}">${TEAM_NAMES[team]}</b><label>Players <select data-team-players="${team}">${[1, 2, 3, 4].map((n) => `<option value="${n}">${n}</option>`).join('')}</select></label><label>Bots <select data-team-bots="${team}">${[0, 1, 2, 3, 4].map((n) => `<option value="${n}"${n === 1 ? ' selected' : ''}>${n}</option>`).join('')}</select></label></div>`).join('')
+}
+
+function teamColor(team: TeamId): string {
+  return ({ red: '#e0473e', blue: '#3e6fe0', green: '#45b04a', yellow: '#e6c43a', orange: '#e08a3a', purple: '#9b5bd6', cyan: '#2fb6b0', pink: '#e05b9a' })[team]
+}
+
+function teamSetupControls(): string {
+  return `<label class="field check"><input id="custom-teams" type="checkbox"><span>Custom teams and bots</span></label><div id="team-setup" class="team-setup hidden"><label class="field"><span>Number of teams</span><select id="team-count">${TEAMS.slice(2).map((_, i) => `<option value="${i + 2}"${i + 2 === 4 ? ' selected' : ''}>${i + 2}</option>`).join('')}</select></label><p class="muted small">Choose the human limit and starting bots for each team. Bots are in addition to human player limits. Total human limit: 16.</p><div id="team-setup-rows">${setupRows(4)}</div><p id="team-setup-error" class="error-line"></p></div>`
+}
+
+function installTeamSetup(card: Element): void {
+  const enabled = card.querySelector<HTMLInputElement>('#custom-teams')!
+  const area = card.querySelector<HTMLElement>('#team-setup')!
+  const count = card.querySelector<HTMLSelectElement>('#team-count')!
+  const rows = card.querySelector<HTMLElement>('#team-setup-rows')!
+  const size = card.querySelector<HTMLSelectElement>('#size')
+  enabled.addEventListener('change', () => {
+    area.classList.toggle('hidden', !enabled.checked)
+    if (size) size.disabled = enabled.checked
+  })
+  count.addEventListener('change', () => { rows.innerHTML = setupRows(Number(count.value)) })
+}
+
+function readTeamSetup(card: Element): TeamSetup[] | undefined {
+  if (!card.querySelector<HTMLInputElement>('#custom-teams')?.checked) return undefined
+  const players = [...card.querySelectorAll<HTMLSelectElement>('select[data-team-players]')]
+  const setup = players.map((select) => {
+    const team = select.dataset.teamPlayers as TeamId
+    return { team, players: Number(select.value), bots: Number(card.querySelector<HTMLSelectElement>(`select[data-team-bots="${team}"]`)?.value) }
+  })
+  const parsed = parseTeamSetup(encodeTeamSetup(setup))
+  const error = card.querySelector<HTMLElement>('#team-setup-error')
+  if (!parsed) {
+    if (error) error.textContent = 'Use 2–8 teams, 1–4 players per team, 0–4 bots per team, and at most 16 human players.'
+    return undefined
+  }
+  if (error) error.textContent = ''
+  return parsed
+}
 
 /** The match size picked on the screen, in players. */
 function readSize(card: Element): 4 | 8 | 16 {
@@ -186,7 +232,7 @@ function saveName(name: string) {
  * state and open seats, and a form to make a room (public or invite-only).
  * Opened from the menu, or straight away from an invite link (?room=name).
  */
-function online(invite?: { room: string; private: boolean; fast: boolean }) {
+function online(invite?: { room: string; private: boolean; fast: boolean; teamSetup?: TeamSetup[] }) {
   if (supabaseConfigured || __SITES__) return sitesOnline(invite)
   const card = app.querySelector('.menu-card')!
   const fresh = randomRoomName()
@@ -200,6 +246,7 @@ function online(invite?: { room: string; private: boolean; fast: boolean }) {
     <div class="room-list" id="rooms"><p class="muted small">Looking for rooms…</p></div>
     <p class="label">Make a room</p>
     <label class="field"><span>Players</span><select id="size">${sizeOptions()}</select></label>
+    ${teamSetupControls()}
     <div class="make-room">
       <input id="room" maxlength="32" value="${fresh}" aria-label="Room name">
       <button class="btn" data-act="make">Create</button>
@@ -208,12 +255,14 @@ function online(invite?: { room: string; private: boolean; fast: boolean }) {
     <label class="field check"><input id="fast" type="checkbox"> <span>Fast round: the timeline runs ten times quicker</span></label>
     <p class="muted small">Typing the name of a room that exists joins it. The host starts each round when everyone is ready; bots fill open teams.</p>`
   let rooms: RoomInfo[] = []
-  const join = (room: string, options: { private?: boolean; fast?: boolean; world?: 'arena' | 'sandbox'; size?: 4 | 8 | 16 } = {}) => {
+  const join = (room: string, options: { private?: boolean; fast?: boolean; world?: 'arena' | 'sandbox'; size?: number; teamSetup?: TeamSetup[] } = {}) => {
     const name = playerName()
     saveName(name)
-    start({ name, world: options.world ?? 'arena', room, fast: !!options.fast, size: options.size ?? 4, private: !!options.private }, false)
+    const teamSetup = options.teamSetup
+    start({ name, world: options.world ?? 'arena', room, fast: !!options.fast, size: teamSetup ? teamSetupCapacity(teamSetup) : options.size ?? 4, teamSetup, private: !!options.private }, false)
   }
   const list = card.querySelector('#rooms')!
+  installTeamSetup(card)
   const render = (data: RoomList | null) => {
     const line = card.querySelector('#online')
     if (line) line.innerHTML = data ? onlineLine(data) : 'Could not reach the server. Solo and the sandbox still work.'
@@ -233,7 +282,7 @@ function online(invite?: { room: string; private: boolean; fast: boolean }) {
     list.querySelectorAll<HTMLButtonElement>('[data-room]').forEach((b) =>
       b.addEventListener('click', () => {
         const r = rooms[Number(b.dataset.room)]
-        join(r.room, { fast: r.fast, world: r.world })
+        join(r.room, { fast: r.fast, world: r.world, size: r.capacity, teamSetup: parseTeamSetup(r.teams) })
       }),
     )
   }
@@ -242,20 +291,23 @@ function online(invite?: { room: string; private: boolean; fast: boolean }) {
   card.querySelector('[data-act="invite"]')?.addEventListener('click', () => join(invite!.room, invite))
   card.querySelector('[data-act="quick"]')!.addEventListener('click', () => {
     const best = bestRoom(rooms)
-    join(best?.room ?? 'main', { fast: best?.fast })
+    join(best?.room ?? 'main', { fast: best?.fast, size: best?.capacity, teamSetup: parseTeamSetup(best?.teams) })
   })
   card.querySelector('[data-act="make"]')!.addEventListener('click', () => {
     const room = cleanRoomName((card.querySelector('#room') as HTMLInputElement).value) || fresh
+    const teamSetup = readTeamSetup(card)
+    if (card.querySelector<HTMLInputElement>('#custom-teams')?.checked && !teamSetup) return
     join(room, {
       private: (card.querySelector('#private') as HTMLInputElement).checked,
       fast: (card.querySelector('#fast') as HTMLInputElement).checked,
-      size: readSize(card),
+      size: teamSetup ? teamSetupCapacity(teamSetup) : readSize(card),
+      teamSetup,
     })
   })
 }
 
 /** Sites has no global room directory. Codes select casual, browser-hosted rooms. */
-function sitesOnline(invite?: { room: string; fast: boolean }) {
+function sitesOnline(invite?: { room: string; fast: boolean; teamSetup?: TeamSetup[] }) {
   const card = app.querySelector('.menu-card')!
   card.innerHTML = `
     <div class="online-head"><h2>Play with friends</h2><button class="btn ghost" data-act="back">Back</button></div>
@@ -263,23 +315,29 @@ function sitesOnline(invite?: { room: string; fast: boolean }) {
     <label class="field"><span>Your name</span><input id="name" maxlength="16" value="${esc(savedName())}" placeholder="Your name"></label>
     <label class="field"><span>Room code</span><input id="room" maxlength="32" value="${esc(invite?.room ?? randomRoomName())}"></label>
     <label class="field"><span>Players</span><select id="size">${sizeOptions()}</select></label>
+    ${teamSetupControls()}
     <label class="field check"><input id="fast" type="checkbox" ${invite?.fast ? 'checked' : ''}><span>Fast round (everyone uses the same setting)</span></label>
     <div class="menu-pair"><button class="btn primary" data-act="host">Host a room</button><button class="btn" data-act="join">Join room</button></div>
     <p class="muted small">Share the invite link from the in-game lobby. Anyone signed in with the code can join. The host is trusted with the match state; there are no persistent rankings.</p>
     <p id="sites-auth" class="muted small"></p>`
   card.querySelector('[data-act="back"]')!.addEventListener('click', menu)
+  installTeamSetup(card)
   for (const action of ['host', 'join']) card.querySelector(`[data-act="${action}"]`)!.addEventListener('click', () => {
     const room = cleanRoomName((card.querySelector('#room') as HTMLInputElement).value)
     if (!room) return (card.querySelector('#room') as HTMLInputElement).focus()
     const name = playerName()
     saveName(name)
+    const custom = action === 'host' ? readTeamSetup(card) : invite?.teamSetup ?? readTeamSetup(card)
+    if (card.querySelector<HTMLInputElement>('#custom-teams')?.checked && action === 'host' && !custom) return
+    if (card.querySelector<HTMLInputElement>('#custom-teams')?.checked && action === 'join' && !invite?.teamSetup && !custom) return
     start(
       {
         name,
         room,
         world: 'arena',
         fast: (card.querySelector('#fast') as HTMLInputElement).checked,
-        size: action === 'host' ? readSize(card) : 4,
+        size: custom ? teamSetupCapacity(custom) : action === 'host' ? readSize(card) : 4,
+        teamSetup: custom,
         hosting: action === 'host',
       },
       false,
@@ -306,13 +364,15 @@ function sitesOnline(invite?: { room: string; fast: boolean }) {
 }
 
 if (params.get('play') === '1') {
+  const teamSetup = parseTeamSetup(params.get('teams'))
   start(
     {
       name: params.get('name') ?? (savedName() || 'Player'),
       world: params.get('world') === 'sandbox' ? 'sandbox' : 'arena',
       room: params.get('room') ?? 'main',
       fast: params.get('fast') === '1',
-      size: params.get('size') === '16' ? 16 : params.get('size') === '8' ? 8 : 4,
+      size: teamSetup ? teamSetupCapacity(teamSetup) : params.get('size') === '16' ? 16 : params.get('size') === '8' ? 8 : 4,
+      teamSetup,
       private: params.get('private') === '1',
       hosting: params.get('host') === '1',
     },
@@ -322,5 +382,5 @@ if (params.get('play') === '1') {
   menu()
   // An invite link (?room=name) opens the room list with that room ready to join.
   const invited = params.get('room')
-  if (invited) online({ room: cleanRoomName(invited) || 'main', private: params.get('private') === '1', fast: params.get('fast') === '1' })
+  if (invited) online({ room: cleanRoomName(invited) || 'main', private: params.get('private') === '1', fast: params.get('fast') === '1', teamSetup: parseTeamSetup(params.get('teams')) })
 }
