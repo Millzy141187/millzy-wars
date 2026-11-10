@@ -1,5 +1,6 @@
 import { connectLocal, connectOnline } from '../../../engine/net/client'
 import { connectSites } from '../../../sites/client'
+import { connectSupabase, supabaseConfigured } from '../../../supabase/client'
 import { BRAND } from '../constants'
 import { bedwarsCodec, type ClientMessage, type ServerMessage } from '../protocol'
 import { createBedwarsRoom, type RoomParams } from '../server'
@@ -62,6 +63,7 @@ function start(options: JoinOptions, offline: boolean) {
   }
   const connection = offline
     ? connectLocal<ClientMessage, ServerMessage>(createBedwarsRoom(options, true), options.name, bedwarsCodec)
+    : supabaseConfigured ? connectSupabase({ ...options, hosting: !!options.hosting })
     : __SITES__ ? connectSites({ ...options, hosting: !!options.hosting })
     : connectOnline<ClientMessage, ServerMessage>(
         { name: options.name, world: options.world, room: options.room, ...(options.fast ? { fast: '1' } : {}), ...(options.private ? { private: '1' } : {}) },
@@ -158,7 +160,7 @@ function saveName(name: string) {
  * Opened from the menu, or straight away from an invite link (?room=name).
  */
 function online(invite?: { room: string; private: boolean; fast: boolean }) {
-  if (__SITES__) return sitesOnline(invite)
+  if (supabaseConfigured || __SITES__) return sitesOnline(invite)
   const card = app.querySelector('.menu-card')!
   const fresh = randomRoomName()
   card.innerHTML = `
@@ -240,6 +242,11 @@ function sitesOnline(invite?: { room: string; fast: boolean }) {
     saveName(name)
     start({ name, room, world: 'arena', fast: (card.querySelector('#fast') as HTMLInputElement).checked, hosting: action === 'host' }, false)
   })
+  if (supabaseConfigured) {
+    const note = card.querySelector('#sites-auth')
+    if (note) note.textContent = 'Casual rooms over Supabase Realtime: anyone with the room code can join. The host runs the match and must keep this tab open.'
+    return
+  }
   void fetch('/api/player', { cache: 'no-store' }).then((r) => r.json()).then((player: { signedIn: boolean; configured: boolean }) => {
     if (!card.isConnected) return
     const note = card.querySelector('#sites-auth')

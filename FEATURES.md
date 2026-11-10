@@ -187,6 +187,7 @@ Every number below is in `BOT_PROFILES` (`bedwars/bots.ts`); tests in `bots.test
 - [x] Translucent glass in its own blended pass, with a simple tinted pane texture (browser)
 - [x] A faster default mouse; saved settings with the old default move to it (`settings.test.ts`)
 - [x] Bridging is the classic skill again: the bridge assist is gone
+- [x] Supabase Realtime transport: the same host-authoritative relay over public channels with no game server, chosen by build-time env vars (`supabase-transport.test.ts`)
 
 ## Phase 7: themed arenas
 

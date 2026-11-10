@@ -256,6 +256,24 @@ This repository change does **not** publish the template catalogue or deploy a
 site. The full Buffcraft template is prepared here; `bedwars-lite` remains the
 separate Node-only starter.
 
+## Multiplayer over Supabase
+
+Setting `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` switches online play
+from the Sites relay to Supabase Realtime (the Vercel build uses it). The host's
+browser still runs the authoritative 20 TPS room; Supabase carries presence and
+the same batched 12 KiB frames, so rules, bots and resync are unchanged. Copy the
+two variables into `.env.local` for a local build.
+
+- Channels are public and named from the room code
+  (`bedwars-arena-<code>-normal`). Anyone with the anon key and the code can join
+  or send traffic: casual play, host-trusted, no anti-cheat or rankings.
+- Four players per room, the host keeps the tab open and visible, and a host that
+  leaves ends the match after a 15-second grace period.
+- The anon/publishable key is public by design; never put the service-role key in
+  this build.
+- Without those variables the client keeps using the Sites transport, so the Sites
+deployment and offline play are unaffected.
+
 ## Desktop app
 
 `bun run desktop` runs it from source; `bun run package` builds installers
