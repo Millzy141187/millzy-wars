@@ -140,6 +140,9 @@ describe('potions', () => {
     const d = range()
     hold(d, 'speed_potion')
     d.a.send({ t: 'use' })
+    // The next tick flushes a fresh self snapshot; the test must not rely on
+    // the room's live effects object being shared with the client.
+    ticks(d.room, 1)
     expect(d.a.p.effects.speed).toBeGreaterThan(d.room.tickCount)
     expect(d.a.last('self')!.self.effects.speed).toBe(d.a.p.effects.speed)
     const before = d.a.p.x

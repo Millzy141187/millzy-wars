@@ -1429,8 +1429,11 @@ export class Room {
   }
 
   selfView(p: Player): SelfView {
+    // The in-page host hands this object straight to its own client. Copies
+    // keep client prediction (spending a block locally) from mutating the
+    // authoritative inventory before the server applies the same action.
     return {
-      inventory: p.inventory,
+      inventory: p.inventory.map((slot) => (slot ? { ...slot } : null)),
       selected: p.selected,
       health: Math.ceil(p.health),
       armor: p.armor,
@@ -1439,11 +1442,11 @@ export class Room {
       respawnIn: p.respawnAt === null ? null : wholeSeconds(Math.max(0, p.respawnAt - this.tickCount)),
       eliminated: p.eliminated,
       protectedTicks: wholeSeconds(p.protectedTicks),
-      upgrades: (p.team && this.teams.get(p.team)?.upgrades) || NO_UPGRADES,
+      upgrades: { ...((p.team && this.teams.get(p.team)?.upgrades) || NO_UPGRADES) },
       pickaxeTier: p.pickaxeTier,
       axeTier: p.axeTier,
-      stats: p.stats,
-      effects: p.effects,
+      stats: { ...p.stats },
+      effects: { ...p.effects },
     }
   }
 
