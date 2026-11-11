@@ -7,6 +7,7 @@ import { ARMOR_ORDER, AXES, item, PICKAXES } from '../items'
 import type { ServerMessage } from '../protocol'
 import { BOT_LEVELS, type BotLevel } from '../rules'
 import type { Game } from './game'
+import { CHAOS_INFO, CHAOS_MODES, type ChaosMode } from '../chaos'
 import { keyLabel, type Action } from './settings'
 import { openSettings } from './settings-ui'
 import { openWardrobe } from './wardrobe'
@@ -455,7 +456,7 @@ export class Hud {
     if (!show || !view) return
     const isHost = view.host === g.myId
     const people = g.views.filter((p) => !p.bot)
-    const key = JSON.stringify([view.teams, view.phase, Math.ceil(g.clock() / TPS), self.team, isHost, view.bots, g.botLevel, people.map((p) => [p.id, p.name, p.team]), g.votes, g.myVote, g.locked, this.copied])
+    const key = JSON.stringify([view.teams, view.phase, Math.ceil(g.clock() / TPS), self.team, isHost, view.bots, g.botLevel, g.chaos, people.map((p) => [p.id, p.name, p.team]), g.votes, g.myVote, g.locked, this.copied])
     if (this.lobby.dataset.key === key) return
     this.lobby.dataset.key = key
     const teamButtons = view.teams
@@ -473,7 +474,7 @@ export class Hud {
     }
     const q = new URLSearchParams(location.search)
     const roomName = q.get('room') ?? 'main'
-    const invite = g.mode.offline ? null : inviteLink(roomName, { private: q.get('private') === '1', fast: q.get('fast') === '1', size: Number(q.get('size') ?? 4), teamSetup: parseTeamSetup(q.get('teams')) })
+    const invite = g.mode.offline ? null : inviteLink(roomName, { private: q.get('private') === '1', fast: q.get('fast') === '1', size: Number(q.get('size') ?? 4), teamSetup: parseTeamSetup(q.get('teams')), chaos: g.chaos })
     const status =
       view.phase === 'countdown'
         ? `The round starts in ${Math.ceil(g.clock() / TPS)} seconds.`
@@ -492,10 +493,12 @@ export class Hud {
       <p class="label">In this room (${humans})</p>
       <ul class="roster">${roster}</ul>
       ${view.bots ? `<p class="muted small">${levelName(g.botLevel)} bots fill empty teams when the round starts; anyone who joins mid-round takes a bot's place.</p>` : ''}
+      ${g.chaos.length ? `<p class="muted small"><b>Chaos:</b> ${g.chaos.map((mode) => CHAOS_INFO[mode].name).join(' · ')}</p>` : ''}
       ${parseTeamSetup(q.get('teams')) ? `<p class="muted small">${parseTeamSetup(q.get('teams'))!.map((t) => `${TEAM_NAMES[t.team]}: ${t.players} player${t.players === 1 ? '' : 's'} + ${t.bots} bot${t.bots === 1 ? '' : 's'}`).join(' · ')}</p>` : ''}
       <p class="label">Team</p>
       <div class="team-grid">${teamButtons}</div>
       ${g.votes ? `<p class="label">Arena</p><div class="map-grid">${g.votes.maps.map((m) => `<button class="btn map${g.myVote === m.id ? ' chosen' : ''}" data-map="${m.id}">${m.name}<span>${m.votes}</span></button>`).join('')}</div>` : ''}
+      ${isHost && g.mode.world !== 'sandbox' ? `<p class="label">Chaos modifiers</p><div class="team-grid">${CHAOS_MODES.map((mode) => `<button class="btn${g.chaos.includes(mode) ? ' chosen' : ''}" data-chaos="${mode}" title="${CHAOS_INFO[mode].help}">${CHAOS_INFO[mode].name}</button>`).join('')}</div>` : ''}
       ${isHost && view.bots ? `<p class="label">Bot level</p><div class="team-grid">${BOT_LEVELS.map((l) => `<button class="btn${g.botLevel === l ? ' chosen' : ''}" data-level="${l}">${levelName(l)}</button>`).join('')}</div>` : ''}
       ${isHost ? `<div class="row"><button class="btn primary" data-act="start"${view.phase === 'countdown' ? ' disabled' : ''}>Start now</button><button class="btn" data-act="bots">${view.bots ? 'Bots: on' : 'Bots: off'}</button><button class="btn" data-act="resume">Back to game</button></div>` : '<div class="row"><button class="btn" data-act="resume">Back to game</button></div>'}`
     this.lobby.querySelector('[data-act="resume"]')?.addEventListener('click', () => g.lock())
@@ -519,6 +522,13 @@ export class Hud {
     this.lobby.querySelector('[data-act="start"]')?.addEventListener('click', () => g.send({ t: 'start' }))
     this.lobby.querySelector('[data-act="bots"]')?.addEventListener('click', () => g.send({ t: 'settings', bots: !view.bots }))
     this.lobby.querySelectorAll<HTMLButtonElement>('[data-level]').forEach((b) => b.addEventListener('click', () => g.send({ t: 'settings', bots: view.bots, botLevel: b.dataset.level as BotLevel })))
+    this.lobby.querySelectorAll<HTMLButtonElement>('[data-chaos]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const mode = b.dataset.chaos as ChaosMode
+        const chaos = g.chaos.includes(mode) ? g.chaos.filter((m) => m !== mode) : [...g.chaos, mode]
+        g.send({ t: 'settings', bots: view.bots, chaos })
+      }),
+    )
   }
 
   private renderCenter() {

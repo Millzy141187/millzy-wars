@@ -84,6 +84,10 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 6px; background: var(
 .team-setup-row { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
 .team-setup-row label { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 5px; font-size: 12px; }
 .team-setup-row select, #team-count { min-width: 0; padding: 4px; background: #17120f; color: white; border: 1px solid #8d7b6b; font: inherit; }
+.team-grid .btn.chosen { outline: 2px solid #ffd84a; outline-offset: -2px; }
+.chaos-grid { display: grid; gap: 6px; margin: 4px 0 12px; }
+.chaos-grid .field.check { align-items: flex-start; line-height: 1.35; }
+.chaos-grid input { margin-top: 2px; }
 .error-line { min-height: 1em; margin: 4px 0 0; color: #ff8585; font-size: 12px; }
 .menu-buttons { display: grid; gap: 8px; margin: 4px 0 12px; }
 .menu-buttons .btn { height: 44px; font-size: 18px; }

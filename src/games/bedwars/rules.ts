@@ -1,4 +1,5 @@
 import { TEAMS, type TeamId } from './blocks'
+import type { ChaosMode } from './chaos'
 import { RESPAWN_TICKS, TPS } from './constants'
 
 /** How well bots play; `BOT_PROFILES` in bots.ts says what each level changes. */
@@ -35,6 +36,8 @@ export interface GameRules {
   cheats: boolean
   /** Arena layouts players can vote for in the lobby; the first is the default. */
   maps: string[]
+  /** Host-selected chaotic events that run during the round. */
+  chaos: ChaosMode[]
 }
 
 const min = 60 * TPS
@@ -61,6 +64,7 @@ export function arenaRules(overrides: Partial<GameRules> = {}): GameRules {
     timeline: TIMELINE,
     cheats: false,
     maps: ['skyreach', 'lanterns', 'dunes', 'frostpeak', 'ruins'],
+    chaos: [],
     ...overrides,
   }
 }

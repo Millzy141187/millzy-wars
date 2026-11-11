@@ -66,9 +66,15 @@ The menu offers three ways in:
   spawns sparring bots (`/bot 2 hard` for two hard ones), `/nobots` clears
   them, `/help` lists the rest.
 
+Hosts can pick **chaos modifiers** while setting up a room, and toggle them in the
+lobby next to the arena vote: random warps every minute, a mystery item for
+everyone, potion rain, and a bed blessing that brings a destroyed bed back. The
+choices travel in the invite link and every player gets the same events.
+
 URL parameters skip the menu: `?play=1&world=sandbox`, `?play=1&offline=1`,
 `&room=name`, `&private=1` (off the room list), `&fast=1` (the round's
-timeline runs ten times faster). `GET /api/rooms` returns the room list as JSON.
+timeline runs ten times faster), `&chaos=teleport,items` (host modifiers).
+`GET /api/rooms` returns the room list as JSON.
 
 ### Controls
 

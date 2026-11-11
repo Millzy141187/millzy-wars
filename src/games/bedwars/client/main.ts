@@ -15,6 +15,7 @@ import '@fontsource/pixelify-sans/700.css'
 import { drawTile } from '../../../engine/render/textures'
 import { TEAMS, TEAM_NAMES, type TeamId } from '../blocks'
 import { encodeTeamSetup, parseTeamSetup, teamSetupCapacity, type TeamSetup } from '../setup'
+import { CHAOS_INFO, CHAOS_MODES, encodeChaos, parseChaos, type ChaosMode } from '../chaos'
 import './styles.css'
 
 type JoinOptions = RoomParams & { name: string; hosting?: boolean }
@@ -64,6 +65,7 @@ function start(options: JoinOptions, offline: boolean) {
   if (options.fast) query.set('fast', '1')
   if (options.size > 4) query.set('size', String(options.size))
   if (options.teamSetup) query.set('teams', encodeTeamSetup(options.teamSetup))
+  if (options.chaos?.length) query.set('chaos', encodeChaos(options.chaos))
   if (!__SITES__ && options.private) query.set('private', '1')
   if (offline) query.set('offline', '1')
   if (__SITES__ && options.hosting && !offline) query.set('host', '1')
@@ -85,6 +87,7 @@ function start(options: JoinOptions, offline: boolean) {
           ...(options.fast ? { fast: '1' } : {}),
           ...(options.size > 4 ? { size: String(options.size) } : {}),
           ...(options.teamSetup ? { teams: encodeTeamSetup(options.teamSetup) } : {}),
+          ...(options.chaos?.length ? { chaos: encodeChaos(options.chaos) } : {}),
           ...(options.private ? { private: '1' } : {}),
         },
         bedwarsCodec,
@@ -140,6 +143,16 @@ function readTeamSetup(card: Element): TeamSetup[] | undefined {
   }
   if (error) error.textContent = ''
   return parsed
+}
+
+function chaosControls(selected: readonly ChaosMode[] = []): string {
+  return `<p class="label">Chaos modifiers</p><div class="chaos-grid">${CHAOS_MODES.map(
+    (mode) => `<label class="field check"><input type="checkbox" data-chaos="${mode}"${selected.includes(mode) ? ' checked' : ''}> <span><b>${CHAOS_INFO[mode].name}</b>: ${CHAOS_INFO[mode].help}</span></label>`,
+  ).join('')}</div>`
+}
+
+function readChaos(card: Element): ChaosMode[] {
+  return parseChaos(encodeChaos([...card.querySelectorAll<HTMLInputElement>('input[data-chaos]:checked')].map((input) => input.dataset.chaos as ChaosMode)))
 }
 
 /** The match size picked on the screen, in players. */
@@ -232,7 +245,7 @@ function saveName(name: string) {
  * state and open seats, and a form to make a room (public or invite-only).
  * Opened from the menu, or straight away from an invite link (?room=name).
  */
-function online(invite?: { room: string; private: boolean; fast: boolean; teamSetup?: TeamSetup[] }) {
+function online(invite?: { room: string; private: boolean; fast: boolean; teamSetup?: TeamSetup[]; chaos?: ChaosMode[] }) {
   if (supabaseConfigured || __SITES__) return sitesOnline(invite)
   const card = app.querySelector('.menu-card')!
   const fresh = randomRoomName()
@@ -247,6 +260,7 @@ function online(invite?: { room: string; private: boolean; fast: boolean; teamSe
     <p class="label">Make a room</p>
     <label class="field"><span>Players</span><select id="size">${sizeOptions()}</select></label>
     ${teamSetupControls()}
+    ${chaosControls()}
     <div class="make-room">
       <input id="room" maxlength="32" value="${fresh}" aria-label="Room name">
       <button class="btn" data-act="make">Create</button>
@@ -255,11 +269,11 @@ function online(invite?: { room: string; private: boolean; fast: boolean; teamSe
     <label class="field check"><input id="fast" type="checkbox"> <span>Fast round: the timeline runs ten times quicker</span></label>
     <p class="muted small">Typing the name of a room that exists joins it. The host starts each round when everyone is ready; bots fill open teams.</p>`
   let rooms: RoomInfo[] = []
-  const join = (room: string, options: { private?: boolean; fast?: boolean; world?: 'arena' | 'sandbox'; size?: number; teamSetup?: TeamSetup[] } = {}) => {
+  const join = (room: string, options: { private?: boolean; fast?: boolean; world?: 'arena' | 'sandbox'; size?: number; teamSetup?: TeamSetup[]; chaos?: ChaosMode[] } = {}) => {
     const name = playerName()
     saveName(name)
     const teamSetup = options.teamSetup
-    start({ name, world: options.world ?? 'arena', room, fast: !!options.fast, size: teamSetup ? teamSetupCapacity(teamSetup) : options.size ?? 4, teamSetup, private: !!options.private }, false)
+    start({ name, world: options.world ?? 'arena', room, fast: !!options.fast, size: teamSetup ? teamSetupCapacity(teamSetup) : options.size ?? 4, teamSetup, chaos: options.chaos, private: !!options.private }, false)
   }
   const list = card.querySelector('#rooms')!
   installTeamSetup(card)
@@ -282,7 +296,7 @@ function online(invite?: { room: string; private: boolean; fast: boolean; teamSe
     list.querySelectorAll<HTMLButtonElement>('[data-room]').forEach((b) =>
       b.addEventListener('click', () => {
         const r = rooms[Number(b.dataset.room)]
-        join(r.room, { fast: r.fast, world: r.world, size: r.capacity, teamSetup: parseTeamSetup(r.teams) })
+        join(r.room, { fast: r.fast, world: r.world, size: r.capacity, teamSetup: parseTeamSetup(r.teams), chaos: parseChaos(r.chaos) })
       }),
     )
   }
@@ -291,7 +305,7 @@ function online(invite?: { room: string; private: boolean; fast: boolean; teamSe
   card.querySelector('[data-act="invite"]')?.addEventListener('click', () => join(invite!.room, invite))
   card.querySelector('[data-act="quick"]')!.addEventListener('click', () => {
     const best = bestRoom(rooms)
-    join(best?.room ?? 'main', { fast: best?.fast, size: best?.capacity, teamSetup: parseTeamSetup(best?.teams) })
+    join(best?.room ?? 'main', { fast: best?.fast, size: best?.capacity, teamSetup: parseTeamSetup(best?.teams), chaos: parseChaos(best?.chaos) })
   })
   card.querySelector('[data-act="make"]')!.addEventListener('click', () => {
     const room = cleanRoomName((card.querySelector('#room') as HTMLInputElement).value) || fresh
@@ -302,12 +316,13 @@ function online(invite?: { room: string; private: boolean; fast: boolean; teamSe
       fast: (card.querySelector('#fast') as HTMLInputElement).checked,
       size: teamSetup ? teamSetupCapacity(teamSetup) : readSize(card),
       teamSetup,
+      chaos: readChaos(card),
     })
   })
 }
 
 /** Sites has no global room directory. Codes select casual, browser-hosted rooms. */
-function sitesOnline(invite?: { room: string; fast: boolean; teamSetup?: TeamSetup[] }) {
+function sitesOnline(invite?: { room: string; fast: boolean; teamSetup?: TeamSetup[]; chaos?: ChaosMode[] }) {
   const card = app.querySelector('.menu-card')!
   card.innerHTML = `
     <div class="online-head"><h2>Play with friends</h2><button class="btn ghost" data-act="back">Back</button></div>
@@ -316,6 +331,7 @@ function sitesOnline(invite?: { room: string; fast: boolean; teamSetup?: TeamSet
     <label class="field"><span>Room code</span><input id="room" maxlength="32" value="${esc(invite?.room ?? randomRoomName())}"></label>
     <label class="field"><span>Players</span><select id="size">${sizeOptions()}</select></label>
     ${teamSetupControls()}
+    ${chaosControls(invite?.chaos)}
     <label class="field check"><input id="fast" type="checkbox" ${invite?.fast ? 'checked' : ''}><span>Fast round (everyone uses the same setting)</span></label>
     <div class="menu-pair"><button class="btn primary" data-act="host">Host a room</button><button class="btn" data-act="join">Join room</button></div>
     <p class="muted small">Share the invite link from the in-game lobby. Anyone signed in with the code can join. The host is trusted with the match state; there are no persistent rankings.</p>
@@ -338,6 +354,7 @@ function sitesOnline(invite?: { room: string; fast: boolean; teamSetup?: TeamSet
         fast: (card.querySelector('#fast') as HTMLInputElement).checked,
         size: custom ? teamSetupCapacity(custom) : action === 'host' ? readSize(card) : 4,
         teamSetup: custom,
+        chaos: action === 'host' ? readChaos(card) : invite?.chaos ?? readChaos(card),
         hosting: action === 'host',
       },
       false,
@@ -365,6 +382,7 @@ function sitesOnline(invite?: { room: string; fast: boolean; teamSetup?: TeamSet
 
 if (params.get('play') === '1') {
   const teamSetup = parseTeamSetup(params.get('teams'))
+  const chaos = parseChaos(params.get('chaos'))
   start(
     {
       name: params.get('name') ?? (savedName() || 'Player'),
@@ -373,6 +391,7 @@ if (params.get('play') === '1') {
       fast: params.get('fast') === '1',
       size: teamSetup ? teamSetupCapacity(teamSetup) : params.get('size') === '16' ? 16 : params.get('size') === '8' ? 8 : 4,
       teamSetup,
+      chaos,
       private: params.get('private') === '1',
       hosting: params.get('host') === '1',
     },
@@ -382,5 +401,5 @@ if (params.get('play') === '1') {
   menu()
   // An invite link (?room=name) opens the room list with that room ready to join.
   const invited = params.get('room')
-  if (invited) online({ room: cleanRoomName(invited) || 'main', private: params.get('private') === '1', fast: params.get('fast') === '1', teamSetup: parseTeamSetup(params.get('teams')) })
+  if (invited) online({ room: cleanRoomName(invited) || 'main', private: params.get('private') === '1', fast: params.get('fast') === '1', teamSetup: parseTeamSetup(params.get('teams')), chaos: parseChaos(params.get('chaos')) })
 }

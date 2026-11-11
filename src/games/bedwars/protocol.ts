@@ -1,5 +1,6 @@
 import type { TeamId } from './blocks'
 import type { BotLevel, GameRules } from './rules'
+import type { ChaosMode } from './chaos'
 import type { TeamUpgrades, UpgradeId } from './shop'
 import type { Slot } from '../../engine/inventory'
 import type { ArmorTier, Effect } from './items'
@@ -40,8 +41,8 @@ export type ClientMessage =
   | { t: 'swap'; a: number; b: number }
   | { t: 'team'; team: TeamId }
   | { t: 'start' }
-  /** Host only, before a round: bots on or off, and optionally their level. */
-  | { t: 'settings'; bots: boolean; botLevel?: BotLevel }
+  /** Host only, before a round: bots on or off, their level, and chaos modifiers. */
+  | { t: 'settings'; bots: boolean; botLevel?: BotLevel; chaos?: ChaosMode[] }
   | { t: 'chat'; text: string }
   | { t: 'vote'; map: string }
   /** Start drawing the held bow; `release` fires (the server times the draw). */
@@ -190,8 +191,8 @@ export type ServerMessage =
   | { t: 'votes'; maps: { id: string; name: string; votes: number }[]; current: string }
   /** End of a round: the winner and everyone's stats, for the end screen. */
   | { t: 'summary'; winner: TeamId | 'draw'; players: RoundStats[]; lobbyIn: number }
-  /** Lobby settings beyond the game view: the bot level. Sent on connect and when it changes. */
-  | { t: 'lobby'; botLevel: BotLevel }
+  /** Lobby settings beyond the game view: the bot level and active chaos modifiers. Sent on connect and when they change. */
+  | { t: 'lobby'; botLevel: BotLevel; chaos: ChaosMode[] }
 
 // Wire format ------------------------------------------------------------
 //

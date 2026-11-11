@@ -33,6 +33,7 @@ import { raycastBlock } from '../../engine/raycast'
 import { rng } from '../../engine/random'
 import { toBase64 } from '../../engine/world'
 import { encodeTeamSetup } from './setup'
+import { CHAOS_INTERVAL, CHAOS_MODES, encodeChaos, isChaosMode, type ChaosMode } from './chaos'
 import {
   BASE_RADIUS,
   FORGE_EMERALD_INTERVAL,
@@ -168,6 +169,8 @@ export class Room {
   botsEnabled: boolean
   /** Level for bots made from now on; the host changes it in the lobby. */
   botLevel: BotLevel
+  /** Host-selected chaos events; everyone in the room runs the same ones. */
+  chaos: ChaosMode[]
   hostId: number | null = null
   readonly random: () => number
   /** How the room was asked for (its name, world, speed, privacy); set by the server, for the room list. */
@@ -190,6 +193,7 @@ export class Room {
   private diamondTier = 0
   private emeraldTier = 0
   private bedRegenAt: number | null = null
+  private chaosAt: Record<ChaosMode, number> = { teleport: 0, items: 0, effects: 0, 'bed-blessing': 0 }
   private unsubscribeWorld: (() => void) | null = null
   private readonly createMap: () => MapDef
 
@@ -198,6 +202,7 @@ export class Room {
     this.random = rng(options.seed ?? 1)
     this.botsEnabled = options.rules.bots
     this.botLevel = options.rules.botLevel
+    this.chaos = [...options.rules.chaos]
     this.mapId = options.rules.maps[0] ?? 'skyreach'
     this.createMap = options.createMap ?? (() => (options.rules.mode === 'sandbox' ? createSandbox() : createArena(this.rules.teams, arenaLayout(this.mapId))))
     this.resetWorld()
@@ -267,7 +272,7 @@ export class Room {
     this.send(p, { t: 'welcome', id, world: toBase64(this.world.encode()), map: this.meta(), tp: p.tp })
     if (this.sent.full) this.send(p, this.sent.full)
     if (this.rules.mode === 'arena') this.send(p, this.votesMessage())
-    this.send(p, { t: 'lobby', botLevel: this.botLevel })
+    this.send(p, this.lobbyMessage())
 
     if (this.rules.mode === 'sandbox') {
       p.team = brain ? p.team : 'red'
@@ -291,7 +296,7 @@ export class Room {
     this.send(p, { t: 'welcome', id, world: toBase64(this.world.encode()), map: this.meta(), tp: p.tp })
     if (this.sent.full) this.send(p, this.sent.full)
     if (this.rules.mode === 'arena') this.send(p, this.votesMessage())
-    this.send(p, { t: 'lobby', botLevel: this.botLevel })
+    this.send(p, this.lobbyMessage())
     this.send(p, { t: 'self', self: this.selfView(p) })
   }
 
@@ -354,6 +359,7 @@ export class Room {
       bots,
       capacity: this.rules.mode === 'sandbox' ? 16 : this.rules.teams.reduce((sum, team) => sum + (this.rules.teamPlayerLimits?.[team] ?? this.rules.teamSize), 0),
       ...(p.teamSetup ? { teams: encodeTeamSetup(p.teamSetup) } : {}),
+      ...(p.chaos?.length ? { chaos: encodeChaos(p.chaos) } : {}),
     }
   }
 
@@ -400,14 +406,19 @@ export class Room {
       case 'start':
         if (p.id === this.hostId && this.phase === 'waiting') this.beginCountdown()
         return
-      case 'settings':
+      case 'settings': {
         if (p.id !== this.hostId || this.phase === 'playing') return
+        const before = JSON.stringify([this.botLevel, this.chaos])
         this.botsEnabled = !!msg.bots
-        if (BOT_LEVELS.includes(msg.botLevel as BotLevel) && msg.botLevel !== this.botLevel) {
-          this.botLevel = msg.botLevel as BotLevel
-          this.broadcast({ t: 'lobby', botLevel: this.botLevel })
+        if (BOT_LEVELS.includes(msg.botLevel as BotLevel)) this.botLevel = msg.botLevel as BotLevel
+        const nextChaos = Array.isArray(msg.chaos) ? msg.chaos : null
+        if (nextChaos && nextChaos.every(isChaosMode) && new Set(nextChaos).size === nextChaos.length) {
+          this.chaos = CHAOS_MODES.filter((mode) => nextChaos.includes(mode))
+          if (this.params) this.params.chaos = [...this.chaos]
         }
+        if (JSON.stringify([this.botLevel, this.chaos]) !== before) this.broadcast(this.lobbyMessage())
         return
+      }
       case 'chat':
         return this.onChat(p, String(msg.text ?? '').slice(0, 200))
       case 'look':
@@ -921,6 +932,10 @@ export class Room {
     this.phaseStart = this.tickCount
   }
 
+  private lobbyMessage(): ServerMessage {
+    return { t: 'lobby', botLevel: this.botLevel, chaos: [...this.chaos] }
+  }
+
   votesMessage(): ServerMessage {
     const count = (id: string) => [...this.votes.values()].filter((v) => v === id).length
     return { t: 'votes', maps: this.rules.maps.map((id) => ({ id, name: arenaLayout(id).name, votes: count(id) })), current: this.mapId }
@@ -988,6 +1003,7 @@ export class Room {
     this.phase = 'playing'
     this.phaseStart = this.tickCount
     this.timelineIndex = 0
+    this.scheduleChaos()
     for (const g of this.generators) g.next = this.tickCount + 20
     for (const p of this.players.values()) if (p.team) this.spawn(p)
     this.broadcastEvent('title', 'Protect your bed', 'Destroy enemy beds and be the last team standing')
@@ -1064,6 +1080,7 @@ export class Room {
     for (const p of this.players.values()) this.stepPlayer(p)
     if (this.phase === 'playing') this.arsenal.step()
     this.stepGenerators()
+    this.stepChaos()
     this.stepDrops()
     this.stepPhase()
     this.flush()
@@ -1099,6 +1116,74 @@ export class Room {
       const pool = !!(p.team && this.teams.get(p.team)?.upgrades.healPool && base && Math.hypot(p.x - base.center[0], p.z - base.center[2]) < BASE_RADIUS)
       if (this.tickCount % (pool ? HEAL_POOL_INTERVAL : REGEN_INTERVAL) === 0) p.health = Math.min(MAX_HEALTH, p.health + 1)
     }
+  }
+
+  private scheduleChaos(): void {
+    for (const mode of CHAOS_MODES) this.chaosAt[mode] = this.chaos.includes(mode) ? this.tickCount + CHAOS_INTERVAL[mode] : 0
+  }
+
+  private stepChaos(): void {
+    if (this.phase !== 'playing') return
+    for (const mode of this.chaos) {
+      if (this.tickCount < this.chaosAt[mode]) continue
+      this.chaosAt[mode] = this.tickCount + CHAOS_INTERVAL[mode]
+      if (mode === 'teleport') this.chaosTeleport()
+      else if (mode === 'items') this.chaosItems()
+      else if (mode === 'effects') this.chaosEffects()
+      else this.chaosBlessing()
+    }
+  }
+
+  /** Random warp: everyone alive lands on another team's base, never in the void. */
+  private chaosTeleport(): void {
+    const bases = this.map.bases.filter((base) => this.teams.has(base.team) && !this.teams.get(base.team)?.eliminated)
+    if (!bases.length) return
+    for (const p of this.players.values()) {
+      if (!p.alive || !p.team || p.home) continue
+      const away = bases.filter((base) => base.team !== p.team)
+      const pool = away.length ? away : bases
+      const base = pool[Math.floor(this.random() * pool.length)]
+      this.teleport(p, ...base.spawn, 0)
+    }
+    this.broadcastEvent('title', 'Chaos: random warp', 'Everyone was thrown across the arena')
+  }
+
+  /** Mystery item: one random useful stack for every living player. */
+  private chaosItems(): void {
+    const rolls: [string, number][] = [
+      ['wool', 16], ['clay', 12], ['planks', 12], ['golden_apple', 2], ['fireball', 2], ['arrow', 16], ['tnt', 1], ['pearl', 1], ['bridge_egg', 2],
+      ['iron', 8], ['gold', 4], ['diamond', 2], ['emerald', 1], ['speed_potion', 1], ['jump_potion', 1], ['invisibility_potion', 1],
+    ]
+    for (const p of this.players.values()) {
+      if (!p.alive || !p.team || p.home) continue
+      const [id, count] = rolls[Math.floor(this.random() * rolls.length)]
+      const def = item(id)
+      if (!def || !canFit(p.inventory, id, count)) continue
+      addItem(p.inventory, id, count)
+      this.event(p, 'system', `Mystery item: ${count} ${def.name}`)
+    }
+    this.broadcastEvent('system', 'Chaos: mystery items for everyone')
+  }
+
+  /** Potion rain: a random effect for everyone for twenty seconds. */
+  private chaosEffects(): void {
+    const choices: [Effect, string][] = [['speed', 'Speed'], ['jump', 'Jump boost'], ['invisible', 'Invisibility']]
+    const [effect, label] = choices[Math.floor(this.random() * choices.length)]
+    for (const p of this.players.values()) if (p.alive && p.team && !p.home) p.effects[effect] = this.tickCount + 20 * TPS
+    this.broadcastEvent('system', `Chaos: ${label.toLowerCase()} for everyone for 20 seconds`)
+  }
+
+  /** Bed blessing: one destroyed bed returns, as long as its team is still in the round. */
+  private chaosBlessing(): void {
+    const fallen = this.map.bases.filter((base) => {
+      const state = this.teams.get(base.team)
+      return state && !state.bed && !state.eliminated
+    })
+    if (!fallen.length) return
+    const base = fallen[Math.floor(this.random() * fallen.length)]
+    placeBed(this.world, base.team, base.bed.x, base.bed.y, base.bed.z, base.bed.dx, base.bed.dz)
+    this.teams.get(base.team)!.bed = true
+    this.broadcastEvent('bed', `${TEAM_NAMES[base.team]} bed was blessed`, 'Chaos brought a destroyed bed back')
   }
 
   private stepGenerators(): void {

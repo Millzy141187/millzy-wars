@@ -19,6 +19,7 @@ import { checkBreak } from '../beds'
 import { ATTACK_REACH, BLOCK_REACH, EYE_HEIGHT, SNEAK_EYE_HEIGHT, TICK_MS, TPS } from '../constants'
 import { countItem, HOTBAR } from '../../../engine/inventory'
 import { item, JUMP_BOOST, placedBlock, SPEED_BOOST } from '../items'
+import type { ChaosMode } from '../chaos'
 import type { MapMeta } from '../maps/types'
 import { IDLE_INPUT, lookDirection, playerBox, stepMovement, type MoveInput, type Mover } from '../../../engine/physics'
 import type { ClientMessage, GameView, PlayerView, SelfView, ServerMessage } from '../protocol'
@@ -95,6 +96,8 @@ export class Game {
   myVote: string | null = null
   /** The level bots will play at, as the host last set it. */
   botLevel: BotLevel = 'normal'
+  /** Active host-selected chaos modifiers, as the room last broadcast them. */
+  chaos: ChaosMode[] = []
   private tick = 0
 
   /** Our own body, predicted locally. */
@@ -317,6 +320,7 @@ export class Game {
         break
       case 'lobby':
         this.botLevel = m.botLevel
+        this.chaos = m.chaos ?? []
         break
     }
   }

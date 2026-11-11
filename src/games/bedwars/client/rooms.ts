@@ -1,4 +1,5 @@
 import type { Phase } from '../protocol'
+import { encodeChaos, type ChaosMode } from '../chaos'
 import { encodeTeamSetup, type TeamSetup } from '../setup'
 
 /** One public room, as `/api/rooms` lists it (the room's summary plus who is connected). */
@@ -13,6 +14,7 @@ export interface RoomInfo {
   bots: number
   capacity: number
   teams?: string
+  chaos?: string
   connections: number
 }
 
@@ -56,12 +58,13 @@ export function statusLabel(r: RoomInfo): string {
 }
 
 /** A link that opens the menu ready to join this room. */
-export function inviteLink(room: string, options: { private?: boolean; fast?: boolean; size?: number; teamSetup?: TeamSetup[] } = {}): string {
+export function inviteLink(room: string, options: { private?: boolean; fast?: boolean; size?: number; teamSetup?: TeamSetup[]; chaos?: ChaosMode[] } = {}): string {
   const q = new URLSearchParams({ room })
   if (options.private) q.set('private', '1')
   if (options.fast) q.set('fast', '1')
   if (options.size && options.size !== 4) q.set('size', String(options.size))
   if (options.teamSetup) q.set('teams', encodeTeamSetup(options.teamSetup))
+  if (options.chaos?.length) q.set('chaos', encodeChaos(options.chaos))
   return `${location.origin}${location.pathname}?${q}`
 }
 
