@@ -1,6 +1,6 @@
 import { TPS } from './constants'
 
-export const CHAOS_MODES = ['teleport', 'items', 'effects', 'bed-blessing'] as const
+export const CHAOS_MODES = ['teleport', 'items', 'effects', 'bed-blessing', 'shared-inventory'] as const
 export type ChaosMode = (typeof CHAOS_MODES)[number]
 
 export const CHAOS_INFO: Record<ChaosMode, { name: string; help: string }> = {
@@ -8,20 +8,23 @@ export const CHAOS_INFO: Record<ChaosMode, { name: string; help: string }> = {
   items: { name: 'Mystery item', help: 'Every minute, every player gets a random item.' },
   effects: { name: 'Potion rain', help: 'Every 45 seconds, everyone gets a random potion effect for 20 seconds.' },
   'bed-blessing': { name: 'Bed blessing', help: 'Every 90 seconds, a destroyed bed comes back.' },
+  'shared-inventory': { name: 'Shared inventory', help: 'Every team draws from one inventory. The pool resets each round.' },
 }
 
+/** Timed events only; shared inventory is a permanent round mutation, so its interval is unused. */
 export const CHAOS_INTERVAL: Record<ChaosMode, number> = {
   teleport: 60 * TPS,
   items: 60 * TPS,
   effects: 45 * TPS,
   'bed-blessing': 90 * TPS,
+  'shared-inventory': 0,
 }
 
 export function isChaosMode(value: string): value is ChaosMode {
   return (CHAOS_MODES as readonly string[]).includes(value)
 }
 
-/** Compact, shareable host modifiers: `teleport,items,bed-blessing`. Unknown or duplicate modes are rejected. */
+/** Compact, shareable host modifiers: `teleport,items,shared-inventory`. Unknown or duplicate modes are rejected. */
 export function parseChaos(value: string | null | undefined): ChaosMode[] {
   if (!value || value.length > 64) return []
   const modes = value.split(',')

@@ -68,8 +68,9 @@ The menu offers three ways in:
 
 Hosts can pick **chaos modifiers** while setting up a room, and toggle them in the
 lobby next to the arena vote: random warps every minute, a mystery item for
-everyone, potion rain, and a bed blessing that brings a destroyed bed back. The
-choices travel in the invite link and every player gets the same events.
+everyone, potion rain, a bed blessing that brings a destroyed bed back, and a
+shared team inventory. The choices travel in the invite link and every player
+gets the same events.
 
 URL parameters skip the menu: `?play=1&world=sandbox`, `?play=1&offline=1`,
 `&room=name`, `&private=1` (off the room list), `&fast=1` (the round's

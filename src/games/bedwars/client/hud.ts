@@ -645,7 +645,7 @@ export class Hud {
     const hot = Array.from({ length: HOTBAR }, (_, k) => cell(k)).join('')
     this.modal.innerHTML = `<div class="window panel narrow">
       <div class="window-head"><h2>Inventory</h2><button class="btn ghost" data-close>Close</button></div>
-      <p class="muted small">Click two slots to swap them.</p>
+      <p class="muted small">${this.game.chaos.includes('shared-inventory') ? 'Your team shares this inventory.' : 'Click two slots to swap them.'}</p>
       <div class="inv-grid">${storage}</div><div class="inv-grid hotrow">${hot}</div></div>`
     this.modal.querySelector('[data-close]')!.addEventListener('click', () => this.closeModal())
     this.modal.querySelectorAll<HTMLButtonElement>('[data-slot]').forEach((b) =>

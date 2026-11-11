@@ -193,7 +193,9 @@ export class Room {
   private diamondTier = 0
   private emeraldTier = 0
   private bedRegenAt: number | null = null
-  private chaosAt: Record<ChaosMode, number> = { teleport: 0, items: 0, effects: 0, 'bed-blessing': 0 }
+  private chaosAt: Record<ChaosMode, number> = { teleport: 0, items: 0, effects: 0, 'bed-blessing': 0, 'shared-inventory': 0 }
+  /** One pool per team while the shared-inventory mutation is active. */
+  private teamInventories = new Map<TeamId, Inventory>()
   private unsubscribeWorld: (() => void) | null = null
   private readonly createMap: () => MapDef
 
@@ -796,12 +798,16 @@ export class Room {
 
     const team = p.team ? this.teams.get(p.team) : undefined
     const final = this.rules.mode === 'arena' && (!team || !team.bed)
-    // The killer collects the victim's resources; everything else is lost.
-    for (const r of RESOURCES) {
-      const n = countItem(p.inventory, r)
-      if (n > 0 && attacker?.alive) addItem(attacker.inventory, r, n)
+    // A shared team pool stays with the team: a death must not clear it or
+    // hand the same resources to an attacker. Individual deaths still loot as before.
+    const sharedInventory = !!p.team && this.chaos.includes('shared-inventory')
+    if (!sharedInventory) {
+      for (const r of RESOURCES) {
+        const n = countItem(p.inventory, r)
+        if (n > 0 && attacker?.alive) addItem(attacker.inventory, r, n)
+      }
+      p.inventory = emptyInventory()
     }
-    p.inventory = emptyInventory()
     p.pickaxeTier = p.pickaxeTier > 0 ? p.pickaxeTier - 1 : p.pickaxeTier
     p.axeTier = p.axeTier > 0 ? p.axeTier - 1 : p.axeTier
 
@@ -849,8 +855,20 @@ export class Room {
     p.lastAttacker = null
     p.protectedTicks = p.home ? 0 : SPAWN_PROTECTION_TICKS
     p.dig = null
+    p.inventory = this.inventoryFor(p)
     this.giveKit(p)
     this.teleport(p, x, y, z, yaw, 0)
+  }
+
+  /** The pool a player draws from; one shared array per team under the mutation. */
+  private inventoryFor(p: Player): Inventory {
+    if (!p.team || !this.chaos.includes('shared-inventory')) return p.inventory
+    let inventory = this.teamInventories.get(p.team)
+    if (!inventory) {
+      inventory = emptyInventory()
+      this.teamInventories.set(p.team, inventory)
+    }
+    return inventory
   }
 
   private giveKit(p: Player): void {
@@ -1004,6 +1022,7 @@ export class Room {
     this.phaseStart = this.tickCount
     this.timelineIndex = 0
     this.scheduleChaos()
+    this.teamInventories.clear()
     for (const g of this.generators) g.next = this.tickCount + 20
     for (const p of this.players.values()) if (p.team) this.spawn(p)
     this.broadcastEvent('title', 'Protect your bed', 'Destroy enemy beds and be the last team standing')
@@ -1054,6 +1073,7 @@ export class Room {
     this.unsubscribeWorld = this.world.onChange((x, y, z) => this.pendingBlocks.push([x, y, z, this.world.raw(x, y, z)]))
     this.pendingBlocks = []
     this.drops = []
+    this.teamInventories.clear()
     this.arsenal?.reset()
     this.diamondTier = this.emeraldTier = 0
     this.teams = new Map(this.rules.teams.map((team) => [team, { team, bed: true, upgrades: { ...NO_UPGRADES }, eliminated: false }]))
@@ -1125,12 +1145,13 @@ export class Room {
   private stepChaos(): void {
     if (this.phase !== 'playing') return
     for (const mode of this.chaos) {
+      if (mode === 'shared-inventory') continue
       if (this.tickCount < this.chaosAt[mode]) continue
       this.chaosAt[mode] = this.tickCount + CHAOS_INTERVAL[mode]
       if (mode === 'teleport') this.chaosTeleport()
       else if (mode === 'items') this.chaosItems()
       else if (mode === 'effects') this.chaosEffects()
-      else this.chaosBlessing()
+      else if (mode === 'bed-blessing') this.chaosBlessing()
     }
   }
 
