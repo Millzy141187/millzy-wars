@@ -2,6 +2,16 @@ import { describe, expect, test } from 'bun:test'
 import type { ServerMessage } from '../src/games/bedwars/protocol'
 import { RelayGame, type RelayMessage } from '../src/sites/relay'
 import { supabaseRealtime, type Channel } from '../src/supabase/realtime'
+import { supabaseTopic } from '../src/supabase/topic'
+import type { RoomParams } from '../src/games/bedwars/server'
+
+test('the room code alone decides the Supabase channel', () => {
+  const host: RoomParams = { world: 'arena', room: 'friends', fast: true, size: 8 }
+  const guest: RoomParams = { world: 'arena', room: 'friends', fast: false, size: 4 }
+  expect(supabaseTopic(host)).toBe('bedwars-arena-friends')
+  expect(supabaseTopic(guest)).toBe(supabaseTopic(host))
+  expect(supabaseTopic({ ...host, room: 'other' })).not.toBe(supabaseTopic(host))
+})
 
 // Models a public Supabase Realtime channel: presence keyed by tab, JSON
 // payloads, ordered fanout, and no server-assigned sender id (the payload

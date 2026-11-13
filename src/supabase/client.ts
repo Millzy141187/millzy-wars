@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js'
 import { TICK_MS } from '../engine/constants'
 import { RelayGame, type RelayMessage } from '../sites/relay'
 import { FLUSH_MS } from '../sites/wire'
-import { encodeTeamSetup } from '../games/bedwars/setup'
 import { supabaseRealtime, type Channel } from './realtime'
+import { supabaseTopic } from './topic'
 
 // A publishable/anon key is public by design; it is baked into the bundle.
 // Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY at build time (Vercel),
@@ -22,9 +22,9 @@ export const supabaseConfigured = Boolean(url && anonKey)
  */
 export function connectSupabase(options: RelayGame['options']) {
   if (!url || !anonKey) throw new Error('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
-  // Channel names only use characters every Realtime topic accepts.
-  const setup = options.teamSetup ? encodeTeamSetup(options.teamSetup) : `preset-${options.size}`
-  const topic = `bedwars-${options.world}-${options.room}-${options.fast ? 'fast' : 'normal'}-${setup.replace(/[^a-z0-9-]/gi, '-')}`
+  // The host owns the room's size, teams and speed. Keep the channel keyed by
+  // the room code alone so joining never depends on a guest matching them.
+  const topic = supabaseTopic(options)
   const client = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } })
   let game!: RelayGame
   const realtime = supabaseRealtime(
